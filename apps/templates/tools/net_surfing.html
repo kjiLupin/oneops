@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/zTree_v3/css/awesomeStyle/awesome.css" type="text/css">
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.core.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.excheck.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exedit.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exhide.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/fuzzysearch.js"></script>
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <link href="{% static 'select2-4.0.5/css/select2.min.css' %}" rel="stylesheet">
+    <script src="{% static 'select2-4.0.5/js/select2.full.js' %}"></script>
+    <script type="text/javascript" src="/static/layer-v3.1.1/layer.js"></script>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_tools.html' %}
+{% endblock %}
+{% block content %}
+    <div class="wrapper wrapper-content">
+        <div class="row">
+            {% if errmsg %}
+                <div class="alert alert-warning text-center">{{ errmsg }}</div>
+            {% endif %}
+            <div class="col-lg-3" id="split-left" style="padding-left: 3px">
+                {% ifequal status 'online' %}
+                    <h4>您当前科学上网状态：在线中</h4>
+                {% else %}
+                    <h4>您当前科学上网状态：离线中</h4>
+                {% endifequal %}
+                <input id="id" type="text" value="{{ id }}" style="display: none;">
+                <table class="table">
+                    <tr>
+                        <td class="text-navy">您的当前IP</td>
+                        <td>{{ client_ip }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-navy">上次申请IP</td>
+                        <td>{{ last_client_ip }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-navy">申请时间</td>
+                        <td>{{ apply_time }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-navy">过期时间</td>
+                        <td>{{ expire_time }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-navy">操作</td>
+                        {% ifequal status 'online'  %}
+                            <td>
+                                <button class='btn btn-primary' id="btn_renewal">续期</button>
+                                <button class='btn btn-danger' id="btn_offline">下线</button>
+                            </td>
+                        {% else %}
+                            <td>
+                                <button class='btn btn-primary' id="btn_apply">点击上线</button>
+                            </td>
+                        {% endifequal %}
+                    </tr>
+                </table>
+            </div>
+            <div class="col-lg-9 animated fadeInRight" id="split-right">
+                <!-- 列表的表格-->
+                <div class="table-responsive">
+                    <table id="name-list" data-toggle="table" class="table table-striped table-hover"
+                           style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- row -->
+    </div><!-- wrapper-content -->
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        function get_surfing_log_list() {
+            $('#name-list').bootstrapTable('destroy').bootstrapTable({
+                method: 'get',
+                contentType: "application/x-www-form-urlencoded",
+                url: "{% url 'tools:net-surfing-logs' %}",
+                striped: true,                      //是否显示行间隔色
+                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                pagination: true,                   //是否显示分页（*）
+                sortable: false,                     //是否启用排序
+                sortOrder: "desc",                   //排序方式
+                sidePagination: "server",           //分页方式：client客户端分页，server服务端分页（*）
+                pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
+                pageSize: 14,                       //每页的记录行数（*）
+                pageList: [20, 30, 50, 100],        //可供选择的每页的行数（*）
+                showExport: false,                   //是否显示导出按钮
+                exportOptions: {
+                    fileName: 'net-surfing-logs'                //文件名称设置
+                },
+                search: false,                       //是否显示表格搜索
+                strictSearch: false,                //是否全匹配搜索
+                showColumns: false,                  //是否显示所有的列（选择显示的列）
+                showRefresh: false,                  //是否显示刷新按钮
+                minimumCountColumns: 2,             //最少允许的列数
+                clickToSelect: true,                //是否启用点击选中行
+                uniqueId: "id",                     //每一行的唯一标识，一般为主键列
+                showToggle: false,                   //是否显示详细视图和列表视图的切换按钮
+                cardView: false,                    //是否显示详细视图
+                detailView: false,                  //是否显示父子表
+                locale: 'zh-CN',                    //本地化
+                toolbar: "#toolbar",               //指明自定义的toolbar
+                queryParamsType: 'limit',
+                columns: [{
+                    title: 'ID（申请历史表）',
+                    field: 'id'
+                }, {
+                    title: 'IP',
+                    field: 'ip'
+                }, {
+                    title: '申请时间',
+                    field: 'apply_time'
+                }, {
+                    title: '失效时间',
+                    field: 'expire_time'
+                }],
+                onLoadSuccess: function () {
+                },
+                onLoadError: function () {
+                    alert("数据加载失败！请检查接口返回信息和错误日志！");
+                },
+                queryParams: function (e) {
+                    return {
+                        page_size: e.limit,
+                        page: e.offset
+                    }
+                },
+                onSearch: function (e) {
+                    //传搜索参数给服务器
+                    return {
+                        search: e.search
+                    }
+                },
+                responseHandler: function (res) {
+                    //在ajax获取到数据，渲染表格之前，修改数据源
+                    return res;
+                }
+            });
+        }
+
+        //初始化数据
+        $(document).ready(function () {
+            get_surfing_log_list()
+        });
+
+        $("#btn_apply").on('click',function(){
+            if (confirm("注意：是否申请科学上网权限？")) {
+                var index = layer.load(2, {shade: [0.3,'#666']});
+                $.ajax({
+                    url: "{% url 'tools:net-surfing-list' %}",
+                    type: "post",
+                    success: function (data) {
+                        if (data.code == 0) {
+                            swal("开通成功", "温馨提示：墙外世界虽美好，但务必遵守我国法律，滥用将被永久封禁！", "success");
+                        } else {
+                            swal("开通失败", data.errmsg, "error");
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        swal("开通失败", res, "error");
+                    },
+                    complete: function () {
+                        layer.close(index);
+                        window.location.reload()
+                    }
+                });
+            }
+        });
+        $("#btn_renewal").on('click',function(){
+            if (confirm("注意：是否确认续期？")) {
+                var index = layer.load(2, {shade: [0.3,'#666']});
+                $.ajax({
+                    url: "{% url 'tools:net-surfing-detail' %}" + $('#id').val(),
+                    type: "put",
+                    data: {"action": "renewal"},
+                    success: function (data) {
+                        if (data.code == 0) {
+                            swal("操作成功", "续期成功！", "success");
+                        } else {
+                            swal("操作失败", data.errmsg, "error");
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        swal("操作失败", res, "error");
+                    },
+                    complete: function () {
+                        layer.close(index);
+                        window.location.reload()
+                    }
+                });
+            }
+        });
+        $("#btn_offline").on('click',function(){
+            if (confirm("注意：是否立即取消科学上网？")) {
+                var index = layer.load(2, {shade: [0.3,'#666']});
+                $.ajax({
+                    url: "{% url 'tools:net-surfing-detail' %}" + $('#id').val(),
+                    type: "put",
+                    data: {"action": "disable"},
+                    success: function (data) {
+                        if (data.code == 0) {
+                            swal("操作成功", "下线成功！", "success");
+                        } else {
+                            swal("操作失败", data.errmsg, "error");
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        swal("操作失败", res, "error");
+                    },
+                    complete: function () {
+                        layer.close(index);
+                        window.location.reload()
+                    }
+                });
+            }
+        });
+
+    </script>
+{% endblock %}

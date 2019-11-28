@@ -1,0 +1,515 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/zTree_v3/css/awesomeStyle/awesome.css" type="text/css">
+    <script src="{% static 'ace/ace.js' %}"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.core.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.excheck.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exedit.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exhide.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/fuzzysearch.js"></script>
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <style type="text/css">
+        div#rMenu {
+            position: absolute;
+            visibility: hidden;
+            text-align: left;
+        {#top: 100%;#} top: 0;
+            left: 0;
+            z-index: 1000;
+            float: left;
+        {#float: left;#} padding: 0 0;
+            margin: 2px 200px 0;
+            list-style: none;
+            background-clip: padding-box;
+        }
+
+        div#rMenu li {
+            margin: 1px 0;
+            cursor: pointer;
+            list-style: none outside none;
+        }
+
+        .dropdown a:hover {
+            background-color: #f1f1f1
+        }
+    </style>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_job.html' %}
+{% endblock %}
+{% block content %}
+    <div class="wrapper wrapper-content">
+        <div class="row">
+            <div class="col-lg-12" id="split-left" style="padding-left: 3px">
+                <div class="ibox float-e-margins">
+                    搜索：<input type="text" id="key" value="" class="empty"/>
+                </div>
+                <div class="ibox float-e-margins">
+                    <div class="ibox-content mailbox-content" style="padding-top: 10px;padding-left: 1px">
+                        <div class="file-manager ">
+                            <div id="assetTree" class="ztree">
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--添加模态框-->
+    <div class="modal fade" id="addModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">添加子目录</h4>
+                </div>
+                <div class="modal-body">
+                    <p hidden id="uperrorMsg" class="text-danger" style="color:red"></p> <!-- for error msg-->
+                    <form id="addForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input id="addparent_id" name="parent_id" type="hidden" class="form-control">
+                        <div class="form-group">
+                            <label for="hostname" class="col-sm-2 control-label">目录名<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="adddir_name" name="dir_name" placeholder="请勿使用中文汉字！"
+                                       type="text" class="form-control" datatype="s2-16" errormsg="格式不正确">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="submit" class="btn btn-primary">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+    <!--上传文件模态窗-->
+    <div class="modal fade" id="uploadModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">上传Scripts文件</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate"
+                    action="{% url 'job:scripts-file-list' %}" enctype="multipart/form-data" method="post">
+                        {% csrf_token %}
+                        <input id="uploadparent_id" name="parent_id" type="hidden" class="form-control">
+                        <div class="form-group">
+                            <label for="file" class="col-sm-4 control-label">文件名（请勿包含中文）：</label>
+                            <div class="col-sm-7">
+                                <input id="upload_file" name="files" type="file" >
+                            </div>
+                            <br/>
+                            <span class="help-block red-fonts"></span>
+                        </div>
+                    </form>
+                    <p>
+                        <p class="text-success" id="id_created"></p>
+                        <p id="created_detail"></p>
+                        <p class="text-danger" id="id_failed"></p>
+                        <p id="failed_detail"></p>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button data-dismiss="modal" class="btn btn-white" type="button">取消</button>
+                    <button class="btn btn-primary" type="button" id="btn_import_submit">上传</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--显示文件内容-->
+    <div class="modal fade" id="showModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <input type="hidden" id="showPath" class="form-control">
+                    <div class="form-group">
+                        <label class="col-sm-6 control-label" id="showTitle"></label>
+                        <div class="col-sm-2">
+                            <select id="editorMode" name='editorMode' class="dropdown-menu-left selectpicker">
+                                <option value="text" selected="selected">Text</option>
+                                <option value="sh">Shell</option>
+                                <option value="python">Python</option>
+                                <option value="php">PHP</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div class="column">
+                        <pre id="editor" class="ace_editor" style="min-height:350px;"></pre>
+                    </div>
+                </div> <!--modal-body-->
+                <div class="form-group">
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-primary" id="save" onclick="saveScripts()">确认</button>
+                    </div>
+                </div> <!--button-->
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+    <div id="rMenu">
+        <ul class="dropdown-menu">
+            <li id="m_create" tabindex="-1" onclick="upload()"><a><i
+                    class="fa fa-plus-square-o"></i> 上传文件到目录</a></li>
+            <li id="m_create" tabindex="-1" onclick="addTreeNode();"><a><i
+                    class="fa fa-plus-square-o"></i> 添加子目录</a></li>
+            <li id="m_del" tabindex="-1" onclick="editTreeNode();"><a><i
+                    class="fa fa-pencil-square-o"></i> 重命名</a></li>
+            <li id="m_del" tabindex="-1" onclick="removeTreeNode();"><a><i
+                    class="fa fa-minus-square"></i> 删除</a></li>
+        </ul>
+    </div>
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        var zTree, rMenu, show = 0;
+
+        function beforeClick(treeId, treeNode, clickFlag) {
+            if (treeNode.name.match(RegExp(/\/$/))) {return false}
+        }
+        function onClick(event, treeId, treeNode) {
+            $.ajax({
+                url: "{% url 'job:scripts-file' file='V1' %}".replace('/V1', treeNode.id),
+                type: "get",
+                success: function (res) {
+                    if (res.code == 0) {
+                        $("#showPath").val(treeNode.id);
+                        $("#showTitle").text(treeNode.name);
+                        var editor = ace.edit('editor');
+                        editor.setValue(res.result);
+                        $('#showModal').modal('show');
+                    } else {
+                        toastr.error(res.errmsg);
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    toastr.error(res);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        }
+        function addTreeNode() {
+            {% if perms.auth.perm_cmdb_business_edit %}
+                hideRMenu();
+                var current_node = zTree.getSelectedNodes()[0];
+                if (!current_node || !current_node.name.match(RegExp(/\//))) {
+                    toastr.error("请重新选择目录！");
+                    return
+                }
+                $('#addparent_id').val(current_node.id);
+                $('#addModal').modal('show');
+            {% else %}
+                toastr.error("无权限！");
+            {% endif %}
+        }
+
+        function removeTreeNode() {
+            {% if perms.auth.perm_cmdb_business_edit %}
+                hideRMenu();
+                var current_node = zTree.getSelectedNodes()[0];
+                if (!current_node) {
+                    return
+                }
+                if (confirm("注意：该目录及目录下的文件都将被删除！是否继续删除？")) {
+                    $.ajax({
+                        url: "{% url 'job:scripts-detail' %}",
+                        method: "DELETE",
+                        data: {"dir_name": current_node.id},
+                        success: function (res) {
+                            if (res.code == 0) {
+                                toastr.success(res.result);
+                                zTree.removeNode(current_node);
+                            } else {
+                                toastr.error(res.errmsg);
+                            }
+                        },
+                        error: function (res) {
+                            toastr.error(res);
+                        },
+                        beforeSend: function (xhr, settings) {
+                            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                            }
+                        }
+                    });
+                }
+            {% else %}
+                toastr.error("无权限！");
+            {% endif %}
+        }
+
+        function editTreeNode() {
+            {% if perms.auth.perm_cmdb_business_edit %}
+                hideRMenu();
+                var current_node = zTree.getSelectedNodes()[0];
+                if (!current_node) {
+                    return
+                }
+                if (current_node.value) {
+                    current_node.name = current_node.value;
+                }
+                zTree.editName(current_node);
+            {% else %}
+                toastr.error("无权限！");
+            {% endif %}
+        }
+
+        function OnRightClick(event, treeId, treeNode) {
+            if (!treeNode && event.target.tagName.toLowerCase() !== "button" && $(event.target).parents("a").length === 0) {
+                zTree.cancelSelectedNode();
+                showRMenu("root", event.clientX, event.clientY);
+            } else if (treeNode && !treeNode.noR) {
+                zTree.selectNode(treeNode);
+                showRMenu("node", event.clientX, event.clientY);
+            }
+        }
+
+        function showRMenu(type, x, y) {
+            $("#rMenu ul").show();
+            x -= 220;
+            x += document.body.scrollLeft;
+            y += document.body.scrollTop + document.documentElement.scrollTop;
+            rMenu.css({"top": y + "px", "left": x + "px", "visibility": "visible"});
+
+            $("body").bind("mousedown", onBodyMouseDown);
+        }
+
+        function hideRMenu() {
+            if (rMenu) rMenu.css({"visibility": "hidden"});
+            $("body").unbind("mousedown", onBodyMouseDown);
+        }
+
+        function onBodyMouseDown(event) {
+            if (!(event.target.id === "rMenu" || $(event.target).parents("#rMenu").length > 0)) {
+                rMenu.css({"visibility": "hidden"});
+            }
+        }
+
+        function onRename(event, treeId, treeNode, isCancel) {
+            if (!isCancel) {
+                $.ajax({
+                    url: "{% url 'job:scripts-detail' %}",
+                    type: "put",
+                    data: {"old_path": treeNode.id, "new_name": treeNode.name},
+                    success: function (res) {
+                        if (res.code == 0) {
+                            toastr.success(res.result);
+                        } else {
+                            toastr.error(res.errmsg);
+                        }
+                    },
+                    beforeSend: function (xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                        }
+                    }
+                });
+            }
+        }
+
+        function selectQueryNode() {
+            var query_node_id = getUrlParam("node");
+            var cookie_node_id = getCookie('node_selected');
+            var node;
+            var node_id;
+
+            if (query_node_id !== null) {
+                node_id = query_node_id
+            } else if (cookie_node_id !== null) {
+                node_id = cookie_node_id;
+            }
+
+            node = zTree.getNodesByParam("id", node_id, null);
+            if (node) {
+                zTree.selectNode(node[0]);
+            }
+        }
+
+        function beforeDrag() {
+            return false
+        }
+
+        function beforeDrop(treeId, treeNodes, targetNode, moveType) {
+        }
+
+        function onDrag(event, treeId, treeNodes) {
+        }
+
+        function onDrop(event, treeId, treeNodes, targetNode, moveType, isCopy) {
+        }
+
+        function initTree() {
+            var setting = {
+                view: {
+                    dblClickExpand: false,
+                    showLine: true
+                },
+                data: {
+                    simpleData: {
+                        enable: true
+                    }
+                },
+                edit: {
+                    enable: true,
+                    showRemoveBtn: false,
+                    showRenameBtn: false,
+                    drag: {
+                        isCopy: false,
+                        isMove: true
+                    }
+                },
+                callback: {
+                    onClick: onClick,
+                    onRightClick: OnRightClick,
+                    beforeClick: beforeClick,
+                    onRename: onRename,
+                    beforeDrag: beforeDrag,
+                    onDrag: onDrag,
+                    beforeDrop: beforeDrop,
+                    onDrop: onDrop
+                }
+            };
+
+            var zNodes = [];
+            $.get("{% url 'job:scripts-list' %}", function (data) {
+                console.log(data);
+                if (data.length === 0) {
+                    zNodes.push({"id": 0, "name": "/", "pId": -1, "open": open});
+                } else {
+                    $.each(data, function (index, v) {
+                        zNodes.push({"id": v["id"], "name": v["name"], "pId": v["parent_id"], "open": false});
+                    });
+                }
+                $.fn.zTree.init($("#assetTree"), setting, zNodes);
+                fuzzySearch('assetTree','#key',null,false);     //initialize fuzzysearch function
+                zTree = $.fn.zTree.getZTreeObj("assetTree");
+                rMenu = $("#rMenu");
+                selectQueryNode();
+            });
+        }
+
+        $(document).ready(function () {
+            initTree();
+        });
+
+        $('#addForm').on('submit', function () {
+            var url = "{% url 'job:scripts-list' %}";
+            var data = $('#addForm').serialize();
+            $.ajax({
+                url: url,
+                type: "post",
+                data: data,
+                success: function (res) {
+                    if (res.code == 0) {
+                        $('#addModal').modal('hide');
+                        toastr.success(res.result);
+                    } else {
+                        toastr.error(res.errmsg);
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    $('#addModal').modal('hide');
+                    toastr.error(res);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        });
+        function upload() {
+            {% if perms.auth.perm_cmdb_business_edit %}
+                hideRMenu();
+                var current_node = zTree.getSelectedNodes()[0];
+                if (!current_node) {
+                    return
+                }
+                $('#uploadparent_id').val(current_node.id);
+                $('#uploadModal').modal('show');
+            {% else %}
+                toastr.error("无权限！");
+            {% endif %}
+        }
+        $("#btn_import_submit").on('click', function () {
+            var $form = $('#uploadForm');
+            swal({
+                    title: "上传确认",
+                    text: "是否确认上传文件？",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消"
+                },
+                function () {
+                    $form.find('.help-block').remove();
+                    function success(data) {
+                        // console.log(data);
+                        $('<span />', {class: 'help-block text-danger'}).html(data.msg).insertAfter($('#upload_file'));
+                        if (data.code === 0) {
+                            var obj = document.getElementById('upload_file');
+                            obj.outerHTML = obj.outerHTML;
+                            $('#id_created').html(data.created_info);
+                            $('#created_detail').html(data.created.join('</br>'));
+                            $('#id_failed').html(data.failed_info);
+                            $('#failed_detail').html(data.failed.join('</br>'));
+                        }
+                    }
+
+                    $form.ajaxSubmit({success: success});
+                });
+        });
+        $("#editorMode").change(function () {
+            var editor = ace.edit("editor");
+            editor.session.setMode("ace/mode/" + $('#editorMode').val());
+        });
+        function saveScripts() {
+            if (confirm("注意：是否确认保存？")) {
+                var editor = ace.edit("editor");
+                var file_content = editor.getValue();
+                var file_path = $("#showPath").val();
+                var url = "{% url 'job:scripts-file' file='V1' %}".replace('/V1', file_path);
+                $.ajax({
+                    url: url,
+                    type: "post",
+                    data: {"cont": file_content},
+                    success: function (res) {
+                        if (res.code == 0) {
+                            $('#showModal').modal('hide');
+                            toastr.success(res.result);
+                        } else {
+                            toastr.error(res.errmsg);
+                        }
+                    },
+                    beforeSend: function (xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+{% endblock %}

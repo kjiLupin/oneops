@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_job.html' %}
+{% endblock %}
+{% block content %}
+    <div class="row clearfix">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div id="div-system-config" class="form-group">
+                    <div class="form-horizontal">
+                        <h5 style="color: darkgrey"><b>Ansible配置</b></h5>
+                        <hr/>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Ansible安装目录</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="ansible_path"
+                                       placeholder="/etc/ansible/" name="ansible_path" id="ansible_path"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Inventory目录</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="inventory_path"
+                                       placeholder="/data/ansible/inventory/" name="inventory_path" id="inventory_path"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Playbook目录</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="playbook_path"
+                                       placeholder="/data/ansible/playbook/" name="playbook_path" id="playbook_path"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Roles目录</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="roles_path"
+                                       placeholder="/data/ansible/roles/" name="roles_path" id="roles_path"/>
+                            </div>
+                        </div>
+
+                        <hr/>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Scripts目录</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="scripts_path"
+                                       placeholder="/data/ansible/scripts/" name="scripts_path" id="scripts_path"/>
+                            </div>
+                        </div>
+
+                        <hr/>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Redis</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="ansible_redis"
+                                       placeholder="127.0.0.1:6379/1" name="ansible_redis" id="ansible_redis"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Redis密码</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="ansible_redis_pwd"
+                                       placeholder="Redis密码未设置则留空" name="ansible_redis_pwd" id="ansible_redis_pwd"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr/>
+                    <div class="form-horizontal">
+                        <h5 style="color: darkgrey"><b>Celery配置</b></h5>
+                        <hr/>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Redis</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="celery_redis"
+                                       placeholder="127.0.0.1:6379/2" name="celery_redis" id="celery_redis"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Redis密码</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="celery_redis_pwd"
+                                       placeholder="Redis密码未设置则留空" name="celery_redis_pwd" id="celery_redis_pwd"/>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="reset" class="btn btn-default pull-left"><i class="fa fa-undo"></i> 重置
+                            </button>
+                            <button id="saveBtn" type="button" class="btn btn-success pull-left"><i
+                                    class="fa fa-check"></i> 保存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+
+    <script>
+        $(document).ready(function () {
+            $.ajax({
+                url: "{% url 'job:config-list' %}",
+                type: "get",
+                success: function (data) {
+                    reShowForm(data,'div-system-config');
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        });
+        $("#saveBtn").click(function () {
+            var sys_config = $("#div-system-config");
+            var configs = [];
+            sys_config.find('[item]').each(
+                function () {
+                    var config_item = $(this).attr("item");
+                    var config_value = $(this).val();
+                    configs.push({
+                        key: config_item,
+                        value: config_value
+                    });
+                }
+            );
+
+            $.ajax({
+                type: "post",
+                url: "{% url 'job:config-list' %}",
+                dataType: "json",
+                data: {
+                    configs: JSON.stringify(configs)
+                },
+                complete: function () {
+                },
+                success: function (data) {
+                    if (data.status === 0) {
+                        toastr.success(data.result);
+                    } else {
+                        alert("status: " + data.status + "\nmsg: " + data.errmsg);
+                    }
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert(errorThrown);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

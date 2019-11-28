@@ -1,0 +1,27 @@
+<nav class="navbar-default sidebar" style="margin-top:0px;" role="navigation">
+    <div class="sidebar-nav navbar-collapse">
+        <ul class="nav" id="side-menu">
+            {% if perms.auth.perm_tools_net_surfing %}
+                <li>
+                    <a href="{% url 'tools:net-surfing-list' %}"><i class="fa fa-google fa-fw"></i> 科学上网</a>
+                </li>
+            {% endif %}
+{#            <li role="separator" class="divider"><a></a></li>#}
+{#            <li>#}
+{#                <a href="{% url 'tools:tomcat' %}"><i class="fa fa-refresh fa-fw"></i> 测试环境Tomcat重启</a>#}
+{#            </li>#}
+            <li role="separator" class="divider"><a></a></li>
+            <li>
+                <a href="{% url 'tools:encryption' %}"><i class="fa fa-key fa-fw"></i> 开发/测试数据库加密</a>
+            </li>
+            {% if perms.auth.perm_cmdb_asset_edit %}
+                <li role="separator" class="divider"><a></a></li>
+                <li>
+                    <a href="{% url 'tools:qizhi-create-host' %}"><i class="fa fa-inbox fa-fw"></i> 堡垒机录入</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+    <!-- /.sidebar-collapse -->
+</nav>
+<!-- /.navbar-static-side -->

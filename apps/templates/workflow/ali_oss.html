@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'smart-wizard/css/smart_wizard.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_circles.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_arrows.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_dots.min.css' %}" rel="stylesheet">
+    <link href="{% static 'bootstrap-fileinput/css/fileinput.min.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <script src="{% static 'smart-wizard/js/jquery.smartWizard.min.js' %}"></script>
+    <script src="{% static 'bootstrap-fileinput/js/fileinput.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+		<h3>{{ wf_type }}：{{ wf_name }}</h3>
+		<div id="smartwizard">
+            <ul>
+                <li><a href="#step-1">流程申请<br/>
+                    <small>阿里云OSS文件上传</small>
+                </a></li>
+                <li><a href="#step-2">流程审批<br/>
+                    <small>自助流程，无需管理员审批</small>
+                </a></li>
+                <li><a href="#step-3">流程结束<br/>
+                    <small>显示执行结果</small>
+                </a></li>
+            </ul>
+            <div>
+                <div id="step-1" class="row col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            OSS文件上传
+                        </div>
+                        <div class="panel-body">
+                            <div class="row">
+                                <div class="col-lg-6">
+                                    <form id="uploadForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                                        {% csrf_token %}
+                                        <div class="form-group">
+                                            <label for="groups" class="col-sm-3 control-label">阿里云OSS：</label>
+                                            <div class="col-sm-6">
+                                                <select id="oss" name="oss" class="dropdown-menu-left selectpicker">
+                                                    <option value="" disabled>选择 OSS</option>
+                                                    {% for oss in oss_list %}
+                                                        <option value="{{ oss.id }}">{{ oss.get_supplier_display }}（{{ oss.comment }}）</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="col-lg-12">
+                                                <div class="file-loading">
+                                                    <input id="upload_file" name="upload_file[]" type="file" multiple>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-4 control-label">文件名保持不变：</label>
+                                            <div class="col-sm-8">
+                                                <div class="radio i-checks">
+                                                    <label>
+                                                        <input type="radio" checked value="local_name" name="file_name"><i>是 </i>
+                                                    </label>
+                                                    <label>
+                                                        <input type="radio" value="random_name" name="file_name"><i>否 </i>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="path" class="col-sm-4 control-label">上传到目录：</label>
+                                            <div class="col-sm-8">
+                                                <input id="path" name="path" type="text" class="form-control"
+                                                       placeholder="留空，默认上传到根目录" >
+                                            </div>
+                                        </div>
+                                    </form>
+                                    <h5><a class="bg-warning">访问URL：http://oss.yadoom.com/xxx.jpg</a></h5>
+                                </div>
+                            </div>
+                            <!-- /.row (nested) -->
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <!-- /.panel -->
+                </div>
+                <div id="step-2" class="col-lg-12">
+                </div>
+                <div id="step-3" class="col-lg-12">
+                </div>
+            </div>
+        </div>
+	</div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        //初始化数据
+        $(document).ready(function () {
+            // https://www.jqueryscript.net/other/Flexible-Bootstrap-Plugin-To-Create-Wizard-Style-Interface-Smart-Wizard.html
+            $('#smartwizard').smartWizard({
+                selected: 0,
+
+                // Allows to cycle the navigation of steps
+                cycleSteps: true,
+
+                // Language variables
+                lang: {
+                    next: 'Next',
+                    previous: 'Previous'
+                },
+
+                // step bar options
+                toolbarSettings: {
+                    toolbarPosition: 'bottom', // none, top, bottom, both
+                    toolbarButtonPosition: 'right', // left, right
+                    showNextButton: false, // show/hide a Next button
+                    showPreviousButton: false, // show/hide a Previous button
+                    toolbarExtraButtons: []
+                },
+
+                // Array of disabled Steps
+                disabledSteps: [],
+
+                // Highlight step with errors
+                errorSteps: [],
+
+                // Hidden steps
+                hiddenSteps: [],
+
+                // theme
+                theme: 'arrows',
+
+                // Effect on navigation, none/slide/fade
+                transitionEffect: 'fade'
+            });
+        });
+        $("#upload_file").fileinput({
+            language: 'zh',
+            theme: "explorer-fa",
+            uploadUrl: "{% url 'workflow:flow-ali-oss' %}",
+            uploadLabel: "上传附件",
+            removeLabel: "移除所有",
+            browseLabel: "选择附件",
+            showRemove: true,
+            uploadAsync: false,                             //采用同步上传
+    	    removeFromPreviewOnError: true,                 //当文件不符合规则，就不显示预览
+            minFileCount: 1,
+            maxFileCount: 10,
+            allowedFileExtensions: ["jpg", "gif", "png", "pdf", "mp4"],
+            fileActionSettings: {                               // 在预览窗口中为新选择的文件缩略图设置文件操作的对象配置
+                showRemove: true,                                   // 显示删除按钮
+                showUpload: false,                                   // 显示上传按钮
+                showDownload: false,                                // 显示下载按钮
+                showZoom: false,                                    // 显示预览按钮
+                showDrag: false,                                    // 显示拖拽
+                removeIcon: '<i class="fa fa-trash"></i>',        // 删除图标
+                uploadIcon: '<i class="fa fa-upload"></i>',       // 上传图标
+                uploadRetryIcon: '<i class="fa fa-repeat"></i>'   // 重试图标
+            },
+            uploadExtraData: function (previewId, index) {
+                return $('#uploadForm').serializeJson();
+            }
+        });
+        // 异步上传错误结果处理
+        //$('#uploadfile').on('fileerror', function(event, data, msg) {
+        //});
+        // 异步上传成功结果处理
+        //$("#uploadfile").on("fileuploaded", function (event, data, previewId, index) {
+        //});
+        // 同步上传成功结果处理
+        $("#upload_file").on("filebatchuploadsuccess", function (event, data, previewId, index) {
+            var ret = data.response;
+            if (ret["code"] == 0) {
+                toastr.success("附件上传到阿里OSS成功！");
+                var next_url = '{% url "workflow:flow-ali-oss-detail" %}' + ret["result"]["id"];
+                setTimeout(function(){window.open(next_url,"_self")},3000);
+            } else {
+                toastr.error("附件上传到阿里OSS失败！");
+                toastr.error(ret["errmsg"]);
+            }
+        });
+        // 同步上传失败结果处理
+        $("#upload_file").on('filebatchuploaderror', function (event, data, msg) {
+            toastr.error("附件上传出错：" + data.msg);
+        });
+    </script>
+{% endblock %}

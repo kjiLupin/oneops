@@ -1,0 +1,72 @@
+{% extends 'base_workflow.html' %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block content %}
+    <div class="row clearfix">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div id="typeTabContent" class="tab-content">
+                    <div class="tab-pane fade in active" id="most-used">
+                        {% for mul in most_used_list %}
+                            <div class="panel panel-default col-xs-3" style="margin-right: 5%">
+                                <div class="panel-heading">
+                                    <h3 class="panel-title">
+                                        <a target="_blank" href="{{ mul.uri }}">{{ mul.name }}</a>
+                                    </h3>
+                                    <span class="text">{{ mul.comment }}</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="tab-pane fade" id="prod"></div>
+                    <div class="tab-pane fade" id="test"></div>
+                    <div class="tab-pane fade" id="apply"></div>
+                    <div class="tab-pane fade" id="ops"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+{% block custom_foot_css_js %}
+    <script>
+        $(document).ready(function () {
+        });
+        $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+            // e.target.rel 已激活的标签页rel
+            get_workflow_by_type(e.target.rel)
+        });
+        function get_workflow_by_type(wfType) {
+            if ( wfType !== 'most-used' ) {
+                $.ajax({
+                    type: "get",
+                    url: "{% url 'workflow:wf-list' %}",
+                    timeout: 3000,
+                    data: {
+                        wf_type: wfType
+                    },
+                    success: function (data) {
+                        $("#" + wfType).empty();
+                        for (var i=0;i<data.length;i++) {
+                            var div = "<div class=\"panel panel-default col-xs-3\" style=\"margin-right: 5%\">" +
+                                        "<div class=\"panel-heading\">" +
+                                            "<h3 class=\"panel-title\">" +
+                                                "<a target=\"_blank\" href=\"" + data[i]["uri"] + "\">" + data[i]["name"] + "</a>" +
+                                            "</h3>" +
+                                            "<span class=\"text\">" + data[i]["comment"] + "</span>" +
+                                        "</div>" +
+                                      "</div>";
+                            $("#" + wfType).append(div);
+                        }
+                    },
+                    error: function (data) {
+                        alert(data);
+                    },
+                    complete: function () {
+                    }
+                });
+            }
+        }
+    </script>
+{% endblock %}

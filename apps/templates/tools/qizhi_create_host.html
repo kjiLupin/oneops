@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_tools.html' %}
+{% endblock %}
+{% block content %}
+    <div class="row">
+        <div class="alert alert-info">
+            <button class="close" data-dismiss="alert">
+                <i class="ace-icon fa fa-times"></i>
+            </button>
+
+            <i class="ace-icon fa fa-hand-o-right"> 提示：<br/>
+                本页面仅支持添加linux主机</br>
+                添加成功的主机，除如下需要加入的设备组外</br>
+                默认添加至运维主机组，默认关联root/dev账号密码(默认密码~)
+            </i>
+        </div>
+        <div class="col-lg-12">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                </div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-lg-12">
+                            <form id="createForm" class="form-horizontal">
+                                <div class="form-group">
+                                    <label for="group" class="col-sm-2 control-label">堡垒机设备分组<span
+                                            class="red-fonts">*</span></label>
+                                    <div class="col-sm-8">
+                                        <input type="checkbox" name="group" value="3"> 核心业务主机组
+                                        <input type="checkbox" name="group" value="10"> 中间件主机组
+                                        <input type="checkbox" name="group" value="5"> 呼叫中心主机组
+                                        <input type="checkbox" name="group" value="2"> 大数据主机组
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="hostname" class="col-sm-2 control-label">主机名称<span
+                                            class="red-fonts">*</span></label>
+                                    <div class="col-sm-8">
+                                        <input name="hostname" placeholder="JF-prod-xxx-app01"
+                                               class="form-control" datatype="*" errormsg="填写错误">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ip" class="col-sm-2 control-label">IP<span
+                                            class="red-fonts">*</span></label>
+                                    <div class="col-sm-8">
+                                        <input id="ip" name="ip" placeholder="172.20.1.1"
+                                               class="form-control" datatype="*" errormsg="填写错误">
+                                    </div>
+                                </div>
+                                <input id="submitBtn" type="button" class="btn btn-primary" value="录入">
+                            </form>
+                        </div>
+                        <div class="col-lg-12">
+                            <p id="ret"></p>
+                        </div>
+                    </div>
+                </div>
+                <!-- /.row (nested) -->
+            </div>
+            <!-- /.panel-body -->
+        </div>
+    </div>
+    <!-- /.row -->
+{% endblock %}
+
+{% block custom_foot_css_js %}
+    <script>
+        $(document).ready(function () {
+            $("#submitBtn").click(function () {
+                var ipReg = /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$/;
+                if (!ipReg.test($('#ip').val())) {
+                    alert("请输入正确的ip地址！");
+                    return false;
+                }
+                if (confirm("是否确认添加？")) {
+                    $.ajax({
+                        type: "post",
+                        url: "{% url 'tools:api-qizhi-create-host' version='v1' %}",
+                        data: $('#createForm').serialize(),
+                        success: function (msg) {
+                            $('#ret').append('<p>' + msg + '</p>');
+                        },
+                        beforeSend: function (xhr, settings) {
+                            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                            }
+                        }
+                    })
+                }
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,15 @@
+[Unit]
+Description=WD OneOps Project Celery Beat
+After=celery_beat.service
+
+[Service]
+Type=forking
+User=root
+Group=root
+ExecStart=/opt/wdoneops/apps/startup.sh celery_beat
+ExecReload=
+ExecStop=/opt/wdoneops/apps/shutdown.sh celery_beat
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

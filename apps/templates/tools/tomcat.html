@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <script type="text/javascript" src="/static/layer-v3.1.1/layer.js"></script>
+    <style>
+        .height150{
+            height: 150px !important;
+        }
+    </style>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_tools.html' %}
+{% endblock %}
+{% block content %}
+    <div class="clearfix">
+        <div class="panel-body">
+            <div class="row">
+                <div class="col-lg-3" id="split-left" style="padding-left: 3px">
+                    <div class="form-group bootstrap-select ">
+                        <select id="test_host" class="form-control m-b" size="25">
+                            <option disabled>请选择测试服务器</option>
+                            {% for host in test_host_list %}
+                                {% ifequal host.id select_id %}
+                                    <option value="{{ host.id }}" selected>{{ host.hostname }}</option>
+                                {% else %}
+                                    <option value="{{ host.id }}">{{ host.hostname }}</option>
+                                {% endifequal %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="col-lg-9 animated fadeInRight" id="split-right">
+                    {% for tomcat in tomcat_list %}
+                        <div class="panel panel-default height150 col-xs-3" style="margin-right: 5%">
+                            <div class="panel-heading">
+                                <h3 class="panel-title">{{ tomcat.app_code }}({{ tomcat.app_name }})</h3>
+                            </div>
+                            <div class="panel-body">
+                                <button class='btn btn-warning' onclick=tomcatFunc("{{ tomcat.id }}","restart")>重启</button>
+                                <button class='btn btn-danger' disabled onclick=tomcatFunc("{{ tomcat.id }}","redeploy")>重新部署</button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        $(document).ready(function () {
+            console.log("待开发！")
+        });
+        $("#test_host").change(function () {
+            window.location.href = "{% url 'tools:tomcat' %}" + "?select_id=" + $('#test_host').val();
+        });
+        function tomcatFunc(id, operate) {
+            var host_id = $('#test_host').val();
+            var index = layer.load(2, {shade: [0.3,'#666']});
+            $.ajax({
+                url: "{% url 'tools:api-tomcat' version='v1' %}",
+                type: "get",
+                data: {"do": operate, "host_id": host_id, "app_id": id},
+                success: function (data) {
+                    if (data.code == 0) {
+                        swal("操作成功", data.result, "success");
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                },
+                complete: function () {
+                    layer.close(index);
+                }
+            });
+        }
+    </script>
+{% endblock %}

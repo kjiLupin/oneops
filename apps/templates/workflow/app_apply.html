@@ -1,0 +1,374 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'smart-wizard/css/smart_wizard.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_circles.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_arrows.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_dots.min.css' %}" rel="stylesheet">
+    <script src="{% static 'smart-wizard/js/jquery.smartWizard.min.js' %}"></script>
+    <link rel="stylesheet" href="/static/zTree_v3/css/awesomeStyle/awesome.css" type="text/css">
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.core.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.excheck.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exedit.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exhide.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/fuzzysearch.js"></script>
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <link href="{% static 'select2-4.0.5/css/select2.min.css' %}" rel="stylesheet">
+    <script src="{% static 'select2-4.0.5/js/select2.full.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+		<h3>{{ wf_type }}：{{ wf_name }}</h3>
+		<div id="smartwizard">
+            <ul>
+                <li><a href="#step-1">一、<br/>
+                    <small>开发填写申请单</small>
+                </a></li>
+                <li><a href="#step-2">二、<br/>
+                    <small>运维分配服务器</small>
+                </a></li>
+                <li><a href="#step-3">三、<br/>
+                    <small>开发申请数据库账户</small>
+                </a></li>
+                <li><a href="#step-4">四、<br/>
+                    <small>DBA创建数据库账户</small>
+                </a></li>
+                <li><a href="#step-5">五、<br/>
+                    <small>运维发布上线</small>
+                </a></li>
+                <li><a href="#step-6">六、<br/>
+                    <small>结束</small>
+                </a></li>
+            </ul>
+            <div>
+                <div id="step-1" class="row col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            新应用创建申请单
+                        </div>
+                        <div class="panel-body">
+                            <div class="col-lg-8">
+                                <form id="createForm" class="form-horizontal  nice-validator n-yellow"
+                                      novalidate="novalidate">
+                                    <input type="hidden" name="status" value="0" class="form-control">
+                                    <div class="form-group">
+                                        <label for="createapp_code" class="col-sm-2 control-label">编码<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <input id="createapp_code" name="app_code" placeholder="assetmng"
+                                                   class="form-control" datatype="*" errormsg="填写错误">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="createapp_name" class="col-sm-2 control-label">名称<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <input id="createapp_name" name="app_name" placeholder="资产管理"
+                                                   class="form-control" datatype="*" errormsg="填写错误">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="createapp_type" class="col-sm-2 control-label">类型<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <select id="createapp_type" name="app_type"
+                                                    class="dropdown-menu-left selectpicker ">
+                                                <option value="" selected="selected" disabled>选择项目类型</option>
+                                                <option value="jar">JAR(jdk1.8 + jar启动)</option>
+                                                <option value="war">WAR(jdk1.7 + tomcat启动)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="createscm_url" class="col-sm-2 control-label">Git/SVN地址<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <input id="createscm_url" name="scm_url"
+                                                   placeholder="git@git.example.com:xxx/yyy.git"
+                                                   class="form-control" datatype="git" errormsg="填写错误">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="createdomain_name" class="col-sm-2 control-label">生产域名</label>
+                                        <div class="col-sm-8">
+                                            <input id="createdomain_name" name="domain_name"
+                                                   placeholder="www.example.com" class="form-control" errormsg="填写错误">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="createimportance" class="col-sm-2 control-label">重要性<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <select id="createimportance" name="importance"
+                                                    class="dropdown-menu-left selectpicker ">
+                                                <option value="a" selected="selected">A（核心）</option>
+                                                <option value="b">B（正式）</option>
+                                                <option value="c">C（内部）</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="createbiz_mgt_dept" class="col-sm-2 control-label">开发部门<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <input id="createbiz_mgt_dept" name="biz_mgt_dept" readonly
+                                                   placeholder="若不填则放入未知部门" class="form-control">
+                                            <a id="menuBtn" onclick="showMenu1(); return false;">选择</a>
+                                            <div id="menuContent" class="menuContent" style="display:none">
+                                                <ul id="createTree" class="ztree"></ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="createcomment" class="col-sm-2 control-label">描述</label>
+                                        <div class="col-sm-8">
+                                            <input id="createcomment" name="comment" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="createprimary" class="col-sm-2 control-label">第一负责人<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <select id="createprimary" name="primary" style="width: 100%"
+                                                    tabindex="4">
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="createsecondary" class="col-sm-2 control-label">第二负责人<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <select id="createsecondary" name="secondary" style="width: 100%"
+                                                    multiple tabindex="4">
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!--Status-->
+                                    <div class="form-group">
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-default" data-dismiss="modal">取消
+                                            </button>
+                                            <button type="submit" class="btn btn-primary" id="createsubmitbtn">提交
+                                            </button>
+                                        </div>
+                                    </div> <!--button-->
+                                </form> <!--form-->
+                            </div>
+                            <!-- /.row (nested) -->
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <!-- /.panel -->
+                </div>
+                <div id="step-2" class="col-lg-12">
+                </div>
+                <div id="step-3" class="col-lg-12">
+                </div>
+                <div id="step-4" class="col-lg-12">
+                </div>
+                <div id="step-5" class="col-lg-12">
+                </div>
+                <div id="step-6" class="col-lg-12">
+                </div>
+            </div>
+        </div>
+	</div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        //初始化
+        function initTree() {
+            var setting = {
+                view: {
+                    dblClickExpand: false
+                },
+                data: {
+                    simpleData: {
+                        enable: true
+                    }
+                },
+                callback: {
+                    onClick: onClick1
+                }
+            };
+            var zNodes = [];
+            $.get("{% url 'cmdb:biz-dept-list' %}", function (data) {
+                $.each(data, function (index, v) {
+                    if (v["parent_id"] === 0 || v["parent_id"] === 1) {
+                        zNodes.push({"id": v["id"], "name": v["name"], "pId": v["parent_id"], "open": true});
+                    } else {
+                        zNodes.push({"id": v["id"], "name": v["name"], "pId": v["parent_id"], "open": false});
+                    }
+                });
+                $.fn.zTree.init($("#createTree"), setting, zNodes);
+                sessionStorage.setItem('nodeId', 1);
+                fuzzySearch('createTree','#key',null,false);     //initialize fuzzysearch function
+                zTree = $.fn.zTree.getZTreeObj("createTree");
+            });
+            getOaUser({
+                "url": "{% url 'accounts:api-oa-user-list' version='v1' %}",
+                "select_id1": 'createprimary',
+                "email1": "",
+                "select_id2": 'createsecondary',
+                "email2": ""
+            });
+            $("#createprimary").select2({
+                multiple: false,
+                allowClear: true
+            });
+            $("#createsecondary").select2({
+                multiple: true,
+                allowClear: true
+            });
+        }
+        $(document).ready(function () {
+            // https://www.jqueryscript.net/other/Flexible-Bootstrap-Plugin-To-Create-Wizard-Style-Interface-Smart-Wizard.html
+            $('#smartwizard').smartWizard({
+                selected: 0,
+
+                // Allows to cycle the navigation of steps
+                cycleSteps: true,
+
+                // Language variables
+                lang: {
+                    next: 'Next',
+                    previous: 'Previous'
+                },
+
+                // step bar options
+                toolbarSettings: {
+                    toolbarPosition: 'bottom', // none, top, bottom, both
+                    toolbarButtonPosition: 'right', // left, right
+                    showNextButton: false, // show/hide a Next button
+                    showPreviousButton: false, // show/hide a Previous button
+                    toolbarExtraButtons: []
+                },
+
+                // Array of disabled Steps
+                disabledSteps: [],
+
+                // Highlight step with errors
+                errorSteps: [],
+
+                // Hidden steps
+                hiddenSteps: [],
+
+                // theme
+                theme: 'arrows',
+
+                // Effect on navigation, none/slide/fade
+                transitionEffect: 'fade'
+            });
+            initTree();
+        });
+
+        // 以下创建新应用操作
+        function showMenu1() {
+			var cityObj = $("#createbiz_mgt_dept");
+			var cityOffset = $("#createbiz_mgt_dept").offset();
+			$("#menuContent").css({left:cityOffset.left + "px", top:cityOffset.top + cityObj.outerHeight() + "px"}).slideDown("fast");
+			$("body").bind("mousedown", onBodyDown1);
+		}
+		function hideMenu1() {
+			$("#menuContent").fadeOut("fast");
+			$("body").unbind("mousedown", onBodyDown1);
+		}
+		function onBodyDown1(event) {
+			if (!(event.target.id == "menuBtn" || event.target.id == "menuContent" || $(event.target).parents("#menuContent").length>0)) {
+				hideMenu1();
+			}
+		}
+        function onClick1(e, treeId, treeNode) {
+			var zTree = $.fn.zTree.getZTreeObj("createTree"),
+			nodes = zTree.getSelectedNodes(),
+			v = "";
+			sessionStorage.setItem('nodeId', nodes[0].id);
+			nodes.sort(function compare(a,b){return a.id-b.id;});
+			for (var i=0, l=nodes.length; i<l; i++) {
+				v += nodes[i].name + ",";
+			}
+			if (v.length > 0 ) v = v.substring(0, v.length-1);
+			var cityObj = $("#createbiz_mgt_dept");
+			cityObj.attr("value", v);
+			hideMenu1();
+		}
+
+        //表单验证
+        $("#createForm").Validform({
+            btnSubmit:"#createsubmitbtn",
+            tiptype: 3,
+            datatype:{
+                "git" : /^git@git\.\w+\.\S+:[a-zA-Z0-9\-]+\/[a-zA-Z0-9\-]+.git/
+		    }
+        });
+        /*添加*/
+        $('#createForm').on('submit', function () {
+            $("#createsubmitbtn").attr("disabled", true);
+            var formData = $('#createForm').serializeArray();
+            var obj = {};
+            for (var i in formData) {
+                if (obj.hasOwnProperty(formData[i].name)) {
+                    obj[formData[i].name] = obj[formData[i].name] + "," + formData[i]['value']
+                } else {
+                    obj[formData[i].name] = formData[i]['value'];
+                }
+            }
+            obj['dept_id'] = sessionStorage.getItem('nodeId');
+            $.ajax({
+                url: "{% url 'workflow:flow-app-apply' %}",
+                type: "post",
+                data: obj,
+                success: function (res) {
+                    if (res.code == 0) {
+                        swal({
+                        title:"success",
+                        text:res.result,
+                        type:"success",
+                        confirmButtonText:'确定'
+                        },function(){
+                            window.location.href = "{% url 'workflow:flow-app-apply-detail' %}" + res.flow_id;
+                         });
+                    } else {
+                        swal("操作失败", res.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+            $("#createsubmitbtn").attr("disabled", false);
+            return false;
+        });
+
+    </script>
+{% endblock %}

@@ -1,0 +1,686 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="{% static 'ace/ace.js' %}"></script>
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <link href="{% static 'select2-4.0.5/css/select2.min.css' %}" rel="stylesheet">
+    <script src="{% static 'select2-4.0.5/js/select2.full.js' %}"></script>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_job.html' %}
+{% endblock %}
+{% block content %}
+    <style>
+        .width100{
+            width: 100% !important;
+        }
+    </style>
+    <div class="row clearfix">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div id="div-system-config" class="form-group">
+                    <form id="executeForm" class="form-horizontal" enctype="multipart/form-data" method="post">
+                        <input type="hidden" id="uuid" name="uuid" value="{{ uuid }}" class="form-control">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">任务名称</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="task_name"
+                                       placeholder="磁盘检测" name="task_name" id="task_name"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">账户<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <select id="host_user" name="host_user" class="selectpicker width100" data-live-search="true">
+                                    {% for user in host_users %}
+                                        <option value="{{ user.id }}">{{ user.name }}({{ user.desc }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <a href="/admin/ssh/hostuser/" type="button" class="btn btn-success pull-left"><i class="fa fa-plus"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">程序</label>
+                            <div class="col-sm-8">
+                                <div class="radio i-checks">
+                                    <label> <input type="radio" value="ansible" name="program" checked
+                                                   onclick="pTypeShow(this)">Ansible</label>
+                                    <label> <input type="radio" value="paramiko" name="program" disabled
+                                                   onclick="pTypeShow(this)">Paramiko</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div name="e_ansible" id="e_ansible" style="display:block;">
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Inventory<span class="red-fonts">*</span></label>
+                                <div class="col-sm-4">
+                                    <select id="inventory" name="inventory" class="selectpicker width100" data-live-search="true">
+                                    </select>
+                                </div>
+                                <div class="col-sm-3">
+                                    <button type="button" class="btn btn-primary" data-toggle="collapse"
+                                            data-target="#collapseOne">
+                                        查看内容
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div id="collapseOne" class="collapse in">
+                                    <div class="modal-body col-sm-offset-1 ">
+                                        <div class="column">
+                                            <pre id="inventory_editor" class="ace_editor"
+                                                 style="min-height:350px;width:80%"></pre>
+                                        </div>
+                                    </div> <!--modal-body-->
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">目标主机（组）<span class="red-fonts">*</span></label>
+                                <div class="col-sm-6">
+                                    <input class="form-control" type="text" name="host" id="host"
+                                           placeholder="请输入该Inventory文件中的主机名或组名，多个使用逗号分隔"/>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">执行</label>
+                                <div class="col-sm-8">
+                                    <div class="radio i-checks">
+                                        <label> <input type="radio" value="ad-hoc" name="execute" checked
+                                                       onclick="eTypeShow(this)">Ad-Hoc</label>
+                                        <label> <input type="radio" value="playbook" name="execute"
+                                                       onclick="eTypeShow(this)">Playbook</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ad-hoc -->
+                        <div name="m_ansible" id="m_ansible" style="display:block;">
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Ansible模块</label>
+                                <div class="col-sm-8">
+                                    <div class="radio i-checks">
+                                        <label> <input type="radio" value="command" name="module" checked
+                                                       onclick="mTypeShow(this)">command</label>
+                                        <label> <input type="radio" value="shell" name="module"
+                                                       onclick="mTypeShow(this)">shell</label>
+                                        <label> <input type="radio" value="script" name="module"
+                                                       onclick="mTypeShow(this)">script</label>
+                                        <label> <input type="radio" value="service" name="module"
+                                                       onclick="mTypeShow(this)">service</label>
+                                        <label> <input type="radio" value="yum" name="module"
+                                                       onclick="mTypeShow(this)">yum</label>
+                                        <label> <input type="radio" value="cron" name="module"
+                                                       onclick="mTypeShow(this)">cron</label>
+                                        <label> <input type="radio" value="sync" name="module"
+                                                       onclick="mTypeShow(this)">sync</label>
+                                        <label> <input type="radio" value="custom" name="module"
+                                                       onclick="mTypeShow(this)">自定义</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" name="edit_command" id="edit_command" style="display:block;">
+                                <label class="col-sm-2 control-label">模块参数</label>
+                                <div class="col-sm-6"><input class="form-control" type="text"
+                                                             placeholder="mkdir /path/to/your/heart" name="command"
+                                                             id="command"/></div>
+                            </div>
+                            <div class="form-group" name="edit_shell" id="edit_shell" style="display:none;">
+                                <div class="col-sm-4">
+                                    <label class="col-sm-3 col-sm-offset-2 control-label">语言</label>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-default" onclick="setAceEditMode('sh')">
+                                            <a>Shell</a></button>
+                                        <button type="button" class="btn btn-default"
+                                                onclick="setAceEditMode('python')"><a>Python</a>
+                                        </button>
+                                        <button type="button" class="btn btn-default" onclick="setAceEditMode('perl')">
+                                            <a>Perl</a></button>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <label class="col-sm-2 control-label">脚本</label>
+                                    <div class="col-sm-8">
+                                        <select id="scriptsFirst" class="selectpicker width100" data-live-search="true">
+                                        </select>
+                                    </div>
+                                </div>
+                                <pre id="compile-editor" class="ace_editor col-sm-offset-1"
+                                     style="min-height:350px;width:70%"></pre>
+                                <div class="col-sm-6 col-sm-offset-1">
+                                    <button id="saveScriptsBtn" type="button" class="btn btn-success pull-left">
+                                        保存脚本</button>
+                                </div>
+                            </button>
+                            </div><!-- shell -->
+
+                            <div class="form-group" name="edit_args" id="edit_args" style="display:none;">
+                                <label class="col-sm-2 control-label">模块参数</label>
+                                <div class="col-sm-8">
+                                    <input type="text" id="args" name="args" class="form-control">
+                                </div>
+                            </div><!-- args -->
+                            <div name="edit_custom" id="edit_custom" style="display:none;">
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">模块名称</label>
+                                    <div class="col-sm-2">
+                                        <input type="text" id="custom_module" name="custom_module" class="form-control">
+                                    </div>
+                                    <div class="alert alert-warning col-sm-5" role="alert" style="display: none;"
+                                         id="fetch_tips">该模块dest参数只需填写文件名（后台会补全路径），文件名请勿包含空格
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">模块参数</label>
+                                    <div class="col-sm-8">
+                                        <input type="text" id="custom_args" name="custom_args" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- playbook -->
+                        <div name="m_playbook" id="m_playbook" style="display:none;">
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Playbook<span class="red-fonts">*</span></label>
+                                <div class="col-sm-4">
+                                    <select id="playbook" name="playbook" class="selectpicker width100" data-live-search="true">
+                                    </select>
+                                </div>
+                                <div class="col-sm-3">
+                                    <button type="button" class="btn btn-primary" data-toggle="collapse"
+                                            data-target="#collapseTwo">
+                                        查看内容
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div id="collapseTwo" class="collapse in">
+                                    <div class="modal-body col-sm-offset-1 ">
+                                        <div class="column">
+                                            <pre id="playbook_editor" class="ace_editor"
+                                                 style="min-height:350px;width:80%"></pre>
+                                        </div>
+                                    </div> <!--modal-body-->
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">外部变量</label>
+                                <div class="col-sm-5">
+                                    <input type="text" id="extra_vars" name="extra_vars"
+                                           value='{"host": "1.1.1.1", "cmd": "/bin/ls"}' class="form-control">
+                                </div>
+                            </div>
+                        </div> <!--playbook-->
+
+                        <!-- paramiko -->
+                        <div class="form-group">
+                            <div name="e_paramiko" id="e_paramiko" style="display:none;">
+                                <div class="form-group">
+                                    <label class="col-sm-5 col-sm-offset-1 control-label"><span class="red-fonts">*</span></label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">私密性</label>
+                            <div class="col-sm-8">
+                                <div class="radio i-checks">
+                                    <label> <input type="radio" value="true" name="public" checked>公开的</label>
+                                    <label> <input type="radio" value="false" name="public">私有的</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">状态</label>
+                            <div class="col-sm-8">
+                                <div class="radio i-checks">
+                                    <label> <input type="radio" value="true" name="active" checked>可用的</label>
+                                    <label> <input type="radio" value="false" name="active">停用的</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="tags" class="col-md-2 control-label">标签</label>
+                            <div class="col-md-6">
+                                <select name="tags" style="width: 100%"
+                                        data-placeholder="给作业添加标签，可以更方便的找到它"
+                                        multiple="" tabindex="4" id="tags">
+                                    {% for tag in tag_list %}
+                                        <option value="{{ tag.id }}">{{ tag.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">描述</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="description"
+                                       placeholder="该作业用于某某某用途？" name="description" id="description"/>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="form-horizontal">
+                        <div class="modal-footer">
+                            <button type="reset" class="btn btn-default pull-left"><i class="fa fa-undo"></i> 重置
+                            </button>
+                            <button id="executeBtn" type="button" class="btn btn-success pull-left"><i
+                                    class="fa fa-check"></i> 保存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- saveScriptsModal -->
+    <div class="modal fade" id="saveScriptsModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                        <h4 class="modal-title" id="myModalLabel">请输入详细信息</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-horizontal nice-validator n-yellow" novalidate="novalidate">
+                            <div class="form-group">
+                                <label for="scripts_name" class="col-sm-2 control-label">脚本名</label>
+                                <div class="col-sm-8">
+                                   <input id="scripts_name" name="scripts_name" placeholder="check_disk.sh" type="text"
+                                       class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="scripts_path" class="col-sm-2 control-label">保存到</label>
+                                <div class="col-sm-8">
+                                   <select id="scripts_path" name="scripts_path" class="selectpicker form-control"
+                                        data-live-search="true">
+                                </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                        <button type="button" class="btn btn-primary" id="saveScriptsBtn2">确认</button>
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+
+    <script>
+        function pTypeShow(o) {
+            if (o.value == "paramiko") {
+                document.getElementById("e_ansible").style.display = "none";
+                document.getElementById("e_paramiko").style.display = "block";
+            }
+            else {
+                document.getElementById("e_ansible").style.display = "block";
+                document.getElementById("e_paramiko").style.display = "none";
+            }
+        }
+        function eTypeShow(o) {
+            if (o.value == "ad-hoc") {
+                document.getElementById("m_ansible").style.display = "block";
+                document.getElementById("m_playbook").style.display = "none";
+            }
+            else {
+                document.getElementById("m_ansible").style.display = "none";
+                document.getElementById("m_playbook").style.display = "block";
+                getPlaybookFile();
+                getPlaybookFileCont();
+            }
+        }
+        default_args = {
+            'yum': 'name=httpd state=present',
+            'script': 'chdir=/opt /testdir/testscript.sh',
+            'service': 'name=httpd state=restarted enabled=yes',
+            'sync': 'src=/root/a dest=/tmp/ compress=yes rsync_opts="--exclude=.git --exclude=static/image"',
+            'cron': 'name="sync time" minute=*/3 hour=* day=* month=* weekday=* job="/usr/sbin/ntpdate window.time.com"'
+        };
+        function mTypeShow(o) {
+            if (o.value == "command") {
+                document.getElementById("edit_command").style.display = "block";
+                document.getElementById("edit_shell").style.display = "none";
+                document.getElementById("edit_args").style.display = "none";
+                document.getElementById("edit_custom").style.display = "none";
+            } else if (o.value == "shell") {
+                document.getElementById("edit_command").style.display = "none";
+                document.getElementById("edit_shell").style.display = "block";
+                document.getElementById("edit_args").style.display = "none";
+                document.getElementById("edit_custom").style.display = "none";
+                getScriptsFile('scriptsFirst');
+                setAceEditMode("sh");
+            } else if (o.value == "custom") {
+                document.getElementById("edit_command").style.display = "none";
+                document.getElementById("edit_shell").style.display = "none";
+                document.getElementById("edit_args").style.display = "none";
+                document.getElementById("edit_custom").style.display = "block";
+            } else {
+                document.getElementById("edit_command").style.display = "none";
+                document.getElementById("edit_shell").style.display = "none";
+                document.getElementById("edit_args").style.display = "block";
+                document.getElementById("edit_custom").style.display = "none";
+                document.getElementById("args").value = default_args[o.value];
+            }
+        }
+        function setAceEditMode(model) {
+            var editor = ace.edit("compile-editor");
+            ace.require("ace/ext/old_ie");
+            editor.removeLines();
+            editor.setTheme("ace/theme/monokai");
+            if (model == 'sh') {
+                editor.insert("#!/bin/bash");
+            }
+            else if (model == 'python') {
+                editor.insert("#!/usr/bin/python");
+            }
+            else if (model == 'perl') {
+                editor.insert("#!/usr/bin/perl");
+            }
+            else {
+                editor.insert("#!/bin/bash");
+                model = 'sh'
+            }
+            editor.getSession().setMode("ace/mode/" + model);
+            editor.setShowPrintMargin(false);
+            editor.setOptions({
+                enableBasicAutocompletion: true,
+                enableSnippets: true,
+                enableLiveAutocompletion: true
+            });
+
+        }
+        function getPlaybookFile() {
+            $.ajax({
+                async: false,
+                type: "get",
+                url: "{% url 'job:api-playbook' version='v1' %}",
+                dataType: "json",
+                complete: function () {
+                },
+                success: function (data) {
+                    $('#playbook option').remove();
+                    $.each(data, function (index, v) {
+                        if (index === 0) {
+                            var _html = "<option value='" + v["path"] + "' selected=\"selected\">" + v["name"] + "</option>";
+                        } else {
+                            var _html = "<option value='" + v["path"] + "' >" + v["name"] + "</option>";
+                        }
+                        $('#playbook').append(_html);
+                    });
+                    $('#playbook').selectpicker('render');
+                    $('#playbook').selectpicker('refresh');
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert(errorThrown);
+                }
+            });
+        }
+        function getPlaybookFileCont() {
+            var file_path = $('#playbook').val();
+            // console.log(file_path);
+            $.ajax({
+                url: "{% url 'job:playbook-file' file='V1' %}".replace('/V1', file_path),
+                type: "get",
+                success: function (res) {
+                    if (res.code == 0) {
+                        $('#collapseTwo').collapse('hide');
+                        var editor = ace.edit('playbook_editor');
+                        editor.setValue(res.result);
+                        editor.session.setMode("ace/mode/yaml");
+                        editor.setReadOnly(true);
+                    } else {
+                        toastr.error(res.errmsg);
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    toastr.error(res);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        }
+        function getInventoryFile() {
+            $.ajax({
+                async: false,
+                type: "get",
+                url: "{% url 'job:api-inventory' version='v1' %}",
+                dataType: "json",
+                complete: function () {
+                },
+                success: function (data) {
+                    $('#inventory option').remove();
+                    $.each(data, function (index, v) {
+                        if (index === 0) {
+                            var _html = "<option value='" + v["path"] + "' selected=\"selected\">" + v["name"] + "</option>";
+                        } else {
+                            var _html = "<option value='" + v["path"] + "' >" + v["name"] + "</option>";
+                        }
+                        $('#inventory').append(_html);
+                    });
+                    $('#inventory').selectpicker('render');
+                    $('#inventory').selectpicker('refresh');
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert(errorThrown);
+                }
+            });
+        }
+        function getInventoryFileCont() {
+            var file_path = $('#inventory').val();
+            // console.log(file_path);
+            $.ajax({
+                url: "{% url 'job:inventory-file' file='V1' %}".replace('/V1', file_path),
+                type: "get",
+                success: function (res) {
+                    if (res.code == 0) {
+                        $('#collapseOne').collapse('hide');
+                        var editor = ace.edit('inventory_editor');
+                        editor.setValue(res.result);
+                        editor.setReadOnly(true);
+                    } else {
+                        toastr.error(res.errmsg);
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    toastr.error(res);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        }
+        function getScriptsFile(id) {
+            $.ajax({
+                type: "get",
+                url: "{% url 'job:api-scripts' version='v1' %}",
+                dataType: "json",
+                complete: function () {
+                },
+                success: function (data) {
+                    $('#' + id + " option").remove();
+                    $.each(data, function (index, v) {
+                        var _html = "<option value='" + v["path"] + "' >" + v["name"] + "</option>";
+                        $('#' + id).append(_html);
+                    });
+                    $('#' + id).prepend('<option value="is-empty" selected="selected">请选择目录</option>');
+                    $('#' + id).selectpicker('render');
+                    $('#' + id).selectpicker('refresh');
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert(errorThrown);
+                }
+            });
+        }
+        function getScriptsFileCont(id) {
+            var file_path = $('#' + id).val();
+            if (file_path) {
+                $.ajax({
+                    url: "{% url 'job:scripts-file' file='V1' %}".replace('/V1', file_path),
+                    type: "get",
+                    success: function (res) {
+                        if (res.code == 0) {
+                            var editor = ace.edit('compile-editor');
+                            editor.setValue(res.result);
+                        } else {
+                            toastr.error(res.errmsg);
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        toastr.error(res);
+                    },
+                    beforeSend: function (xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                        }
+                    }
+                });
+            }
+        }
+        function getScriptsDirectory(id) {
+            $.ajax({
+                type: "get",
+                url: "{% url 'job:api-scripts-dir' version='v1' %}",
+                dataType: "json",
+                complete: function () {
+                },
+                success: function (data) {
+                    $('#' + id + " option").remove();
+                    $.each(data, function (index, v) {
+                        var _html = "<option value='" + v["path"] + "' >" + v["name"] + "</option>";
+                        $('#' + id).append(_html);
+                    });
+                    $('#' + id).prepend('<option value="is-empty" selected="selected">请选择目录</option>');
+                    $('#' + id).selectpicker('render');
+                    $('#' + id).selectpicker('refresh');
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert(errorThrown);
+                }
+            });
+        }
+        $("#saveScriptsBtn").click(function () {
+            getScriptsDirectory('scripts_path');
+            $('#saveScriptsModal').modal({});
+            $("#saveScriptsBtn2").unbind("click").click(function () {
+                if (confirm("注意：是否确认保存？")) {
+                    if ($('#up_task_name').val() === "" || $('#up_task_name').val().indexOf("#") !== -1) {
+                        toastr.error("作业名必填，且不能出现#符号！");
+                        return
+                    }
+                    var editor = ace.edit("compile-editor");
+                    var file_content = editor.getValue();
+                    var file_path = $("#scripts_path").val() + "/" + $("#scripts_name").val();
+                    console.log(file_path);
+                    var url = "{% url 'job:scripts-file' file='V1' %}".replace('/V1', file_path);
+                    $.ajax({
+                        url: url,
+                        type: "post",
+                        data: {"cont": file_content},
+                        success: function (res) {
+                            if (res.code == 0) {
+                                $('#saveScriptsModal').modal('hide');
+                                toastr.success(res.result);
+                            } else {
+                                toastr.error(res.errmsg);
+                            }
+                        },
+                        beforeSend: function (xhr, settings) {
+                            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        $(document).ready(function () {
+            getInventoryFile();
+            getInventoryFileCont();
+            $("#tags").select2({
+                multiple: true,
+                allowClear: true
+            });
+            $("#custom_module").bind("input propertychange", function () {
+                $("#fetch_tips").css("display", "none");
+                if ($(this).val() === "fetch") {
+                    $("#fetch_tips").css("display", "block");
+                    $("#custom_args").val('src=/path/to/file dest=filename-\{\{ inventory_hostname \}\}');
+                } else if ($(this).val() === "copy") {
+                    $("#custom_args").val("src=/path/to/file dest=/path/ backup=yes owner=root group=root mode=0644");
+                } else {
+                    $("#custom_args").val("");
+                }
+            });
+        });
+
+        $("#inventory").change(function () {
+            getInventoryFileCont()
+        });
+        $("#scriptsFirst").change(function () {
+            getScriptsFileCont('scriptsFirst')
+        });
+        $("#playbook").change(function () {
+            getPlaybookFileCont()
+        });
+
+        $("#executeBtn").unbind("click").click(function(){
+            if ($('#task_name').val() === "" || $('#task_name').val().indexOf("#") !== -1) {
+                toastr.error("作业名必填，且不能出现#符号！");
+                return
+            }
+            $("#executeBtn").attr("disabled", true);
+            // var data = $('#executeForm').serialize();
+            // console.log(data);
+            var formData = new FormData($('#executeForm')[0]);
+            var editor = ace.edit("compile-editor");
+            formData.append("shell", editor.getValue());
+            $.ajax({
+                url: "{% url 'job:job-list' %}",
+                type: "post",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.code == 0) {
+                        toastr.success(res.result);
+                    } else {
+                        toastr.error(res.errmsg);
+                    }
+                },
+                complete: function () {
+                    $("#executeBtn").attr("disabled", false);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

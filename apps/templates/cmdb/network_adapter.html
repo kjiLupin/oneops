@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <style>
+        .bootstrap-select:not([class*="col-"]):not([class*="form-control"]):not(.input-group-btn) {
+          width: 150px;
+        }
+    </style>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_cmdb.html' %}
+{% endblock %}
+{% block content %}
+    <!-- 自定义操作按钮-->
+    <div id="toolbar" class="form-inline">
+        <div class="form-group bootstrap-select ">
+            <select id="idc_id" class="dropdown-menu-right selectpicker" data-live-search="true">
+                <option value="" selected="selected">所有仓库</option>
+                {% for idc in idc_list %}
+                    <option value="{{ idc.id }}">{{ idc.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group bootstrap-select">
+            <select id="mode_id" class="dropdown-menu-right selectpicker" data-live-search="true">
+                <option value="" selected="selected">所有型号</option>
+                {% for ver in version_list %}
+                    <option value="{{ ver.id }}">{{ ver.version }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group bootstrap-select">
+            <select id="speed" class="dropdown-menu-right selectpicker" data-live-search="true">
+                <option value="" selected="selected">速率</option>
+                {% for speed in speed_list %}
+                    <option value="{{ speed.key }}">{{ speed.value }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group bootstrap-select">
+            <select id="is_active" class="dropdown-menu-right selectpicker" data-live-search="true">
+                <option value="" disabled>是否可用</option>
+                <option value="1" selected="selected">可用</option>
+                <option value="0">已被领用</option>
+            </select>
+        </div>
+    </div>
+    <!-- 列表的表格-->
+    <div class="table-responsive">
+        <table id="object-list" data-toggle="table" class="table table-striped table-hover"
+               style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        </table>
+    </div>
+
+    <div class="modal fade" id="updateModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">领用配件</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="upForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input type="hidden" id="upid" name="id" class="form-control">
+                        <div class="form-group">
+                            <label for="storehouse" class="col-sm-2 control-label">仓库<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upstorehouse" name="storehouse" readonly class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="version" class="col-sm-2 control-label">型号<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upversion" name="version" readonly class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="speed" class="col-sm-2 control-label">速率<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="upspeed" name="speed" readonly class="form-control">
+                            </div>
+                        </div>
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="manufacturer" class="col-sm-2 control-label">厂商</label>
+                            <div class="col-sm-4">
+                                <input id="upmanufacturer" name="manufacturer" readonly class="form-control">
+                            </div>
+                            <label for="sn" class="col-sm-2 control-label">SN</label>
+                            <div class="col-sm-4">
+                                <input id="upsn" name="sn" readonly class="form-control">
+                            </div>
+                        </div><!--硬件信息-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="vendor" class="col-sm-2 control-label">采购渠道<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="upvendor" name="vendor" readonly class="form-control">
+                            </div>
+                        </div><!--供应商-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="trade_date" class="col-sm-2 control-label">采购时间<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="uptrade_date" name="trade_date" readonly class="form-control">
+                            </div>
+                            <label for="expired_date" class="col-sm-2 control-label">过保时间<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="upexpired_date" name="expired_date" readonly class="form-control">
+                            </div>
+                        </div><!--采购时间/过保时间-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="comment" class="col-sm-2 control-label">备注<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upcomment" name="comment" readonly class="form-control">
+                            </div>
+                        </div><!--备注-->
+
+                        <div class="form-group">
+                            <label for="version" class="col-sm-2 control-label">服务器/网络设备<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <select id="upasset_id" name="asset_id" class="dropdown-menu-left selectpicker width100" data-live-search="true">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" onclick="receiveFunc2()">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'datepicker/datepicker3.css' %}" rel="stylesheet">
+    <script src="{% static 'datepicker/bootstrap-datepicker.js' %}"></script>
+
+    <script>
+        //获取列表
+        function get_object_list() {
+            $('#object-list').bootstrapTable('destroy').bootstrapTable({
+                method: 'get',
+                contentType: "application/x-www-form-urlencoded",
+                url: "{% url 'cmdb:network-adapter-list' %}",
+                striped: true,                      //是否显示行间隔色
+                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                pagination: true,                   //是否显示分页（*）
+                sortable: true,                     //是否启用排序
+                sortOrder: "asc",                   //排序方式
+                sidePagination: "server",           //分页方式：client客户端分页，server服务端分页（*）
+                pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
+                pageSize: 14,                       //每页的记录行数（*）
+                pageList: [20, 30, 50, 100],        //可供选择的每页的行数（*）
+                showExport: true,                   //是否显示导出按钮
+                exportOptions: {
+                    fileName: 'network_adapter_list'           //文件名称设置
+                },
+                search: true,                       //是否显示表格搜索
+                strictSearch: false,                //是否全匹配搜索
+                showColumns: true,                  //是否显示所有的列（选择显示的列）
+                showRefresh: true,                  //是否显示刷新按钮
+                minimumCountColumns: 2,             //最少允许的列数
+                clickToSelect: true,                //是否启用点击选中行
+                uniqueId: "id",                     //每一行的唯一标识，一般为主键列
+                showToggle: true,                   //是否显示详细视图和列表视图的切换按钮
+                cardView: false,                    //是否显示详细视图
+                detailView: true,                  //是否显示父子表
+                detailFormatter: function (index, row) {
+                    var html = "配件使用记录：</br>";
+                    for (var idx in row.receive) {
+                        html += row.receive[idx] + "</br>"
+                    }
+                    return html
+                },
+                locale: 'zh-CN',                    //本地化
+                toolbar: "#toolbar",               //指明自定义的toolbar
+                queryParamsType: 'limit',
+                columns: [{
+                    title: '仓库',
+                    field: 'storehouse'
+                }, {
+                    title: '型号',
+                    field: 'version'
+                }, {
+                    title: '速率',
+                    field: 'speed',
+                    sortable: true
+                }, {
+                    title: '硬件制造商',
+                    field: 'manufacturer',
+                    sortable: true
+                }, {
+                    title: 'SN',
+                    field: 'sn',
+                    sortable: true,
+                    visible: false
+                }, {
+                    title: '采购渠道',
+                    field: 'vendor',
+                    sortable: true
+                }, {
+                    title: '采购时间',
+                    field: 'trade_date',
+                    sortable: true
+                }, {
+                    title: '过保时间',
+                    field: 'expired_date',
+                    sortable: true
+                }, {
+                    title: '是否可用',
+                    field: 'is_active',
+                    formatter: function (value, row, index) {
+                        return value == 1 ? '是':'否'
+                    }
+                }, {
+                    title: '备注',
+                    field: 'comment'
+                },  {
+                    title: '操作',
+                    field: 'id',
+                    formatter: function (value, row, index) {
+                        {% if perms.auth.perm_cmdb_accessory_edit %}
+                            var msg = row.is_active == 1 ? "领用":"变更";
+                            var html = "<button class='btn btn-warning' onclick=\"receiveFunc1(" + value + ")\">"+msg+"</button>";
+                            html += "<button class='btn btn-danger' onclick=\"delFunc(" + row.id + ")\">删除</button>";
+                            return html;
+                        {% endif %}
+                    }
+                }],
+                onLoadSuccess: function () {
+                },
+                onLoadError: function () {
+                    alert("数据加载失败！请检查接口返回信息和错误日志！");
+                },
+                queryParams: function (params) {
+                    return {
+                        limit: params.limit,
+                        offset: params.offset,
+                        idc_id: $("#idc_id").val(),
+                        mode_id: $("#mode_id").val(),
+                        speed: $("#speed").val(),
+                        is_active: $("#is_active").val(),
+                        sortName: params.sort,
+                        sortOrder: params.order,
+                        search: params.search
+                    }
+                },
+                onSearch: function (params) {
+                    //传搜索参数给服务器
+                    return {
+                        search: params.search
+                    }
+                },
+                responseHandler: function (res) {
+                    //在ajax获取到数据，渲染表格之前，修改数据源
+                    return res;
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            if (sessionStorage.getItem('network_adapter_selected')) {
+                $("#mode_id").val(sessionStorage.getItem('network_adapter_selected'));
+                $('#mode_id').selectpicker('refresh');
+                sessionStorage.removeItem('network_adapter_selected');
+                $('#speed').prop('disabled', true);
+                $('#speed').selectpicker('refresh');
+            }
+            get_object_list();
+        });
+        $("#idc_id").change(function () {
+            get_object_list();
+        });
+        $("#mode_id").change(function () {
+            $('#speed').prop('disabled', $("#mode_id").val() !== "");
+            $('#speed').selectpicker('refresh');
+            get_object_list();
+        });
+        $("#speed").change(function () {
+            get_object_list();
+        });
+        $("#is_active").change(function () {
+            get_object_list();
+        });
+
+        // 以下领用操作
+        function receiveFunc1(id) {
+            $.ajax({
+                url: "{% url 'cmdb:network-adapter-detail' %}" + id,
+                type: "get",
+                data: {},
+                success: function (data) {
+                    if (data.code == 0) {
+                        var data = data['result'];
+                        $('#upForm')[0].reset();
+                        reShowForm(data,'upForm');
+                        // console.log(data['asset_list'], typeof(data['asset_list']));
+                        $('#upasset_id').empty();
+                        for (var idx in data['asset_list']) {
+                            // console.log(data['asset_list'][idx]['id'], data['asset_list'][idx]['name']);
+                            var a = data['asset_list'][idx];
+                            var _html = "<option value='" + a['id'] + "' >" + a['name'] + "(" + a['ip'] + ")" + "</option>";
+                            $('#upasset_id').append(_html);
+                        }
+                        $('#upasset_id').prepend('<option value="is-empty" disabled="" selected="selected">选择设备</option>');
+                        $('#upasset_id').selectpicker('refresh');
+                        $('#updateModal').modal('show');
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        }
+        /*更新信息*/
+        function receiveFunc2() {
+            swal({
+                    title: "是否确认领用该配件？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var id = $("#upid").val();
+                        var data = $('#upForm').serialize();
+                        $.ajax({
+                            url: "{% url "cmdb:network-adapter-detail" %}" + id,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#updateModal').modal('hide');
+                                        get_object_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+        }
+
+        // 以下删除操作
+        function delFunc(id) {
+            swal({
+                    title: "是否确认删除？",
+                    text: "该记录将无法恢复！",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false
+                },
+                function () {
+                    $.ajax({
+                        url: "{% url "cmdb:network-adapter-detail" %}" + id,
+                        type: "delete",
+                        data: {},
+                        success: function (res) {
+                            console.log(res);
+                            if (res.code == 0) {
+                                swal({
+                                    title: "success",
+                                    text: "操作成功",
+                                    type: "success",
+                                    confirmButtonText: '确定'
+                                }, function () {
+                                    get_object_list();
+                                });
+                            } else {
+                                swal("操作失败", res.errmsg, "error");
+                            }
+                        },
+                        beforeSend: function (xhr, settings) {
+                            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                            }
+                        }
+                    });
+                });
+        }
+
+    </script>
+{% endblock %}

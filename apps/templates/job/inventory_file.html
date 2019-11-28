@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <script src="{% static 'ace/ace.js' %}"></script>
+    <style type="text/css" media="screen">
+        #editor {
+            margin: 0;
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+    </style>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_job.html' %}
+{% endblock %}
+
+{% block content %}
+    <div class="row clearfix">
+        <div class="col-md-12 column">
+            <div class="form-group">
+                <div class="col-sm-1">
+                    <button type="button" id="save" class="btn btn-primary" onclick="saveInventory();"
+                            style="display: none;">
+                        提交保存
+                    </button>
+                </div>
+                <div class="col-sm-2">
+                    <div class="switch switch-small">
+                        <input id="editorSwitch" value="false" type="checkbox">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="wrapper wrapper-content">
+        <div class="row">
+            <div class="col-lg-12">
+                <div class="panel panel-default">
+                    <div class="col-md-12 column">
+                        <div class="alert alert-success" style="display: none;"></div>
+                        <div class="alert alert-danger"  style="display: none;"></div>
+                        <pre id="editor" class="ace_editor" style="min-height:350px">{{ file_content }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}
+{% block custom_foot_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'bootstrap-switch/css/bootstrap-switch.min.css' %}" rel="stylesheet" type="text/css"/>
+    <script src="{% static 'bootstrap-switch/js/bootstrap-switch.min.js' %}"></script>
+    <script>
+        function setreadwrite() {
+            var editor = ace.edit("editor");
+            editor.setReadOnly(false);
+            editor.setTheme("ace/theme/tomorrow_night_eighties");
+            editor.session.setMode("ace/mode/text");
+            $("#save").show();
+        }
+
+        function setreadonly() {
+            var editor = ace.edit("editor");
+            editor.setReadOnly(true);
+            editor.setTheme("ace/theme/xcode");
+            editor.session.setMode("ace/mode/text");
+            $("#save").hide();
+            $(".alert-success").hide();
+            $(".alert-danger").hide();
+        }
+        $(document).ready(function () {
+            $('input[type="checkbox"]').bootstrapSwitch({
+                onText: "只读",
+                offText: "编辑",
+                onColor: "success",
+                offColor: "danger",
+                size: "small",
+                onSwitchChange: function (event, state) {
+                    if (state == true) {
+                        setreadonly();
+                    } else {
+                        setreadwrite();
+                    }
+                }
+            }).bootstrapSwitch('state',true);
+        });
+        function saveInventory() {
+            var editor = ace.edit("editor");
+            var file_content = editor.getValue();
+            console.log(file_content);
+            var url = "{% url 'job:inventory-file' file='V1' %}".replace('/V1', "{{ file_path }}");
+            $.ajax({
+                url: url,
+                type: "post",
+                data: {"cont": file_content},
+                success: function (res) {
+                    if (res.code == 0) {
+                        swal({
+                            title: "success",
+                            text: "保存成功",
+                            type: "success",
+                            confirmButtonText: '确定'
+                        }, function () {
+                            window.location.reload();
+                        });
+                    } else {
+                        swal("操作失败", res.errmsg, "error");
+                    }
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        }
+    </script>
+{% endblock %}

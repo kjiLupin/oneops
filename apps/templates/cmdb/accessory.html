@@ -1,0 +1,575 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_cmdb.html' %}
+{% endblock %}
+{% block content %}
+    <!-- 自定义操作按钮-->
+    <div id="toolbar" class="form-inline">
+        <div class="form-group bootstrap-select ">
+            <select id="accessory" class="dropdown-menu-right selectpicker" data-live-search="true">
+                <option value="" selected="selected">所有配件</option>
+                {% for acc, acc_name in acc_item.items %}
+                    <option value="{{ acc }}">{{ acc_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% if perms.auth.perm_cmdb_accessory_edit %}
+            <div class="form-group ">
+                <button type="button" class="btn btn-default"
+                        onclick="window.location.href='/admin/cmdb/'">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 添加型号
+                </button>
+            </div>
+            <div class="form-group ">
+                <button id="btn_add" type="button" class="btn btn-default">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 采购入库
+                </button>
+            </div>
+            <button id="btn_import" type="button" class="btn btn-default">
+                <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 批量入库
+            </button>
+        {% endif %}
+    </div>
+    <!-- 列表的表格-->
+    <div class="table-responsive">
+        <table id="object-list" data-toggle="table" class="table table-striped table-hover"
+               style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        </table>
+    </div>
+
+    <!--添加模态框-->
+    <div class="modal fade" id="addModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">配件采购入库</h4>
+                </div>
+                <div class="modal-body">
+                    <p hidden id="uperrorMsg" class="text-danger" style="color:red"></p> <!-- for error msg-->
+                    <form id="addForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <div class="form-group">
+                            <label for="add_acc" class="col-sm-2 control-label">配件<span class="red-fonts">*</span></label>
+                            <div class="col-sm-6">
+                                <select id="add_acc" name='mode' class="dropdown-menu-left selectpicker" data-live-search="true" datatype="*">
+                                    <option value="" selected="selected">选择配件</option>
+                                    {% for acc, acc_name in acc_item.items %}
+                                        <option value="{{ acc }}">{{ acc_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="add_mode_id" class="col-sm-2 control-label">型号<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <select id="add_mode_id" name="mode_id"
+                                        class="dropdown-menu-left selectpicker"
+                                        data-live-search="true" datatype="*">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="manufacturer" class="col-sm-2 control-label">厂商</label>
+                            <div class="col-sm-4">
+                                <input id="addmanufacturer" name="manufacturer" placeholder="Intel"
+                                        datatype="s2-16" errormsg="格式不正确" class="form-control">
+                            </div>
+                            <label for="sn" class="col-sm-2 control-label">SN</label>
+                            <div class="col-sm-4">
+                                <input id="addsn" name="sn" placeholder="" class="form-control">
+                            </div>
+                        </div><!--硬件信息-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="vendor" class="col-sm-2 control-label">采购渠道<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="addvendor" name="vendor" placeholder="京东"
+                                       datatype="s2-16" errormsg="格式不正确" class="form-control">
+                            </div>
+                        </div><!--供应商-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="trade_date" class="col-sm-2 control-label">采购时间<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="addtrade_date" name="trade_date"
+                                       datatype="/\d{4}-\d{2}-\d{2}/" errormsg="日期格式不正确" class="form-control">
+                            </div>
+                            <label for="expired_date" class="col-sm-2 control-label">过保时间<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="addexpired_date" name="expired_date"
+                                       datatype="/\d{4}-\d{2}-\d{2}/" errormsg="日期格式不正确" class="form-control">
+                            </div>
+                        </div><!--采购时间/过保时间-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="idc_id" class="col-sm-2 control-label">仓库<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <select name='idc_id' class="dropdown-menu-left selectpicker" data-live-search="true">
+                                    <option value="" selected="selected">选择IDC</option>
+                                    {% for idc in idc_list %}
+                                        <option value="{{ idc.id }}">{{ idc.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <label for="count" class="col-sm-2 control-label">数量<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="addcount" name="count" placeholder="0"
+                                       datatype="n" errormsg="格式不正确"  class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="comment" class="col-sm-2 control-label">备注</label>
+                            <div class="col-sm-8">
+                                <input id="addcomment" name="comment" placeholder="备注" class="form-control">
+                            </div>
+                        </div><!--备注-->
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="addBtn">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <div class="modal fade" id="importModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">批量采购入库</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="importForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate"
+                    action="{% url 'cmdb:accessory-import' %}" enctype="multipart/form-data" method="post">
+                        <div class="form-group">
+                            <label for="network_device" class="col-sm-2 control-label">模板：</label>
+                            <div class="col-sm-8">
+                                <a href="{% url 'cmdb:accessory-export' %}" style="display: block">下载</a>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="network_device" class="col-sm-2 control-label">文件：</label>
+                            <div class="col-sm-8">
+                                <input id="network_device" name="files" type="file" >
+                            </div>
+                            <span class="help-block red-fonts"></span>
+                        </div>
+                    </form>
+                    <p>
+                        <p class="text-success" id="id_created"></p>
+                        <p id="id_created_detail"></p>
+                        <p class="text-warning" id="id_updated"></p>
+                        <p id="id_updated_detail"></p>
+                        <p class="text-danger" id="id_failed"></p>
+                        <p id="id_failed_detail"></p>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button data-dismiss="modal" class="btn btn-white" type="button">取消</button>
+                    <button class="btn btn-primary" type="button" id="btn_import_submit">确认</button>
+                </div>
+            </div>
+        </div>
+    </div><!-- /.modal -->
+
+    <div class="modal fade" id="receiveModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">领用配件</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="upForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input id="upmode_id" name="mode_id" type="hidden" class="form-control">
+                        <div class="form-group">
+                            <label for="version" class="col-sm-2 control-label">配件<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <select id="upaccessory" class="dropdown-menu-left selectpicker width100" disabled
+                                        data-live-search="true">
+                                    {% for acc, acc_name in acc_item.items %}
+                                            <option value="{{ acc }}">{{ acc_name }}</option>
+                                        {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="version" class="col-sm-2 control-label">型号<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upversion" name="version" readonly class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="idc_id" class="col-sm-2 control-label">仓库<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <select id='upidc_id' name='idc_id' class="dropdown-menu-left selectpicker" data-live-search="true">
+                                    <option value="" disabled selected="selected">选择仓库</option>
+                                    {% for idc in idc_list %}
+                                        <option value="{{ idc.id }}">{{ idc.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <label for="version" class="col-sm-2 control-label">剩余</label>
+                            <div class="col-sm-4">
+                                <input id="upresidual" name="residual" readonly
+                                       datatype="n" errormsg="格式不正确"  class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="version" class="col-sm-2 control-label">领取数量<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="upcount" name="count" placeholder="0"
+                                       datatype="n" errormsg="格式不正确"  class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="receiveBtn">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'datepicker/datepicker3.css' %}" rel="stylesheet">
+    <script src="{% static 'datepicker/bootstrap-datepicker.js' %}"></script>
+
+    <script>
+        //获取列表
+        function get_object_list() {
+            var acc_item = ['caddy', 'network_cable', 'jump_wire'];
+            $('#object-list').bootstrapTable('destroy').bootstrapTable({
+                method: 'get',
+                contentType: "application/x-www-form-urlencoded",
+                url: "{% url 'cmdb:accessory-list' %}",
+                striped: true,                      //是否显示行间隔色
+                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                pagination: true,                   //是否显示分页（*）
+                sortable: true,                     //是否启用排序
+                sortOrder: "asc",                   //排序方式
+                sidePagination: "client",           //分页方式：client客户端分页，server服务端分页（*）
+                pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
+                pageSize: 14,                       //每页的记录行数（*）
+                pageList: [20, 30, 50, 100],        //可供选择的每页的行数（*）
+                showExport: true,                   //是否显示导出按钮
+                exportOptions: {
+                    fileName: 'accessory_list'           //文件名称设置
+                },
+                search: true,                       //是否显示表格搜索
+                strictSearch: false,                //是否全匹配搜索
+                showColumns: true,                  //是否显示所有的列（选择显示的列）
+                showRefresh: true,                  //是否显示刷新按钮
+                minimumCountColumns: 2,             //最少允许的列数
+                clickToSelect: true,                //是否启用点击选中行
+                uniqueId: "id",                     //每一行的唯一标识，一般为主键列
+                showToggle: true,                   //是否显示详细视图和列表视图的切换按钮
+                cardView: false,                    //是否显示详细视图
+                detailView: false,                  //是否显示父子表
+                locale: 'zh-CN',                    //本地化
+                toolbar: "#toolbar",               //指明自定义的toolbar
+                queryParamsType: 'limit',
+                columns: [{
+                    title: 'ID',
+                    field: 'id'
+                }, {
+                    title: '配件',
+                    field: 'accessory_name',
+                    formatter: function (value, row, index) {
+                        return '<button type="button" class="btn btn-outline btn-link btn-xs" onclick=redirect("'+ row.accessory + '","' + row.id + '")>' + value +'</button>'
+                    }
+                }, {
+                    title: '型号',
+                    field: 'version'
+                }, {
+                    title: '总采购数',
+                    field: 'total'
+                }, {
+                    title: '剩余数',
+                    field: 'residual',
+                    formatter: function (value, row, index) {
+                        var v = (value < 5 ? "<span style='color:red'>"+value+"</span>":value);
+                        if (acc_item.includes(row.accessory)) {
+                            return '<button type="button" class="btn btn-outline btn-link btn-xs" onclick=receive("' +
+                                row.accessory + '","' + row.id + '")>' + v + '</button>'
+                        } else {
+                            return '<button type="button" class="btn btn-outline btn-link btn-xs" onclick=redirect("' +
+                                row.accessory + '","' + row.id + '")>' + v + '</button>'
+                        }
+                    }
+                }, {
+                    title: '创建时间',
+                    field: 'created_date'
+                }],
+                onLoadSuccess: function () {
+                },
+                onLoadError: function () {
+                    alert("数据加载失败！请检查接口返回信息和错误日志！");
+                },
+                queryParams: function (params) {
+                    return {
+                        accessory: $("#accessory").val(),
+                        search: params.search
+                    }
+                },
+                onSearch: function (params) {
+                    //传搜索参数给服务器
+                    return {
+                        search: params.search
+                    }
+                },
+                responseHandler: function (res) {
+                    //在ajax获取到数据，渲染表格之前，修改数据源
+                    return res;
+                }
+            });
+
+        }
+
+        $(document).ready(function () {
+            get_object_list();
+        });
+
+        $("#accessory").change(function () {
+            get_object_list();
+        });
+
+        $("#add_acc").change(function () {
+            var accessory = $('#add_acc').val();
+            $.ajax({
+                url: "{% url 'cmdb:accessory-list' %}",
+                type: "get",
+                data: {'accessory': accessory},
+                success: function (res) {
+                    $('#add_mode_id').empty();
+                    for (var idx in res) {
+                        var _html = "<option value='" + res[idx]['id'] + "' >" + res[idx]['version'] + "</option>";
+                        $('#add_mode_id').append(_html);
+                    }
+                    $('#add_mode_id').prepend('<option value="is-empty" disabled selected="selected">选择型号</option>');
+                    $('#add_mode_id').selectpicker('refresh');
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        });
+
+        // 以下添加操作
+        /*点击按钮，显示添加模态窗*/
+        $("#btn_add").on('click',function(){
+            $('#addtrade_date').datepicker({format: 'yyyy-mm-dd'});
+            $('#addexpired_date').datepicker({format: 'yyyy-mm-dd'});
+            $('#addModal').modal('show');
+        });
+        //表单验证
+        $("#addForm").Validform({
+            btnSubmit:"#addBtn",
+            tiptype: 3
+        });
+        /*添加*/
+        $('#addForm').on('submit', function () {
+            if (confirm("确认添加该配件？")) {
+                var data = $('#addForm').serialize();
+                $.ajax({
+                    url: "{% url 'cmdb:accessory-list' %}",
+                    type: "post",
+                    data: data,
+                    success: function (res) {
+                        if (res.code == 0) {
+                            swal("添加成功", res.result, "success");
+                            $('#addsn').val('');
+                        } else {
+                            swal("操作失败", res.errmsg, "error");
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        swal("操作失败", res, "error");
+                    },
+                    beforeSend: function (xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                        }
+                    }
+                });
+            }
+        }); /*submit end*/
+        $('#addModal').on('hide.bs.modal', function () {
+            get_object_list();
+        });
+        $("#btn_import").on('click',function(){
+            $('#importModal').modal('show');
+        });
+        $("#btn_import_submit").on('click',function(){
+            var $form = $('#importForm');
+            swal({
+                    title: "导入确认",
+                    text: "是否确认导入配件？",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消"
+                },
+                function () {
+                    $form.find('.help-block').remove();
+                    function success(data) {
+                        // console.log(data);
+                        $('<span />', {class: 'help-block text-danger'}).html(data.msg).insertAfter($('#network_device'));
+                        if (data.code === 0) {
+                            var obj = document.getElementById('network_device');
+                            obj.outerHTML = obj.outerHTML;
+                            $('#id_created').html(data.created_info);
+                            $('#id_created_detail').html(data.created.join('</br>'));
+                            $('#id_updated').html(data.updated_info);
+                            $('#id_updated_detail').html(data.updated.join('</br>'));
+                            $('#id_failed').html(data.failed_info);
+                            $('#id_failed_detail').html(data.failed.join('</br>'));
+                        } else {
+                            $('#id_created').html('');
+                            $('#id_created_detail').html('');
+                            $('#id_updated').html('');
+                            $('#id_updated_detail').html('');
+                            $('#id_failed').html('');
+                            $('#id_failed_detail').html('');
+                        }
+                    }
+
+                    $form.ajaxSubmit({success: success});
+                });
+        });
+        $("#upidc_id").change(function () {
+            $.ajax({
+                url: "{% url 'cmdb:api-acc-residual' version='v1' %}",
+                type: "get",
+                data: {'mode': $('#upaccessory').val(), 'mode_id': $('#upmode_id').val(), 'idc_id': $("#upidc_id").val()},
+                success: function (data) {
+                    if (data.code == 0) {
+                        $('#upresidual').val(data['result']);
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        });
+        function receive(accessory, id) {
+            if (accessory === 'caddy') {
+                var detail_uri = "{% url 'cmdb:caddy-detail' %}" + id;
+            } else if (accessory === 'network_cable') {
+                var detail_uri = "{% url 'cmdb:network-cable-detail' %}" + id;
+            } else {
+                // jump_wire
+                var detail_uri = "{% url 'cmdb:jump-wire-detail' %}" + id;
+            }
+            $.ajax({
+                url: detail_uri,
+                type: "get",
+                success: function (data) {
+                    if (data.code == 0) {
+                        $('#upForm')[0].reset();
+                        reShowForm(data['result'],'upForm');
+                        $('#upmode_id').val(id);
+                        $('#upaccessory').val(data['result']['accessory']);
+                        $('#upaccessory').selectpicker('refresh');
+                        $('#receiveModal').modal('show');
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+            $('#receiveBtn').unbind("click").click(function(){
+                swal({
+                    title: "是否确认领用该配件？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var data = $('#upForm').serialize();
+                        $.ajax({
+                            url: detail_uri,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#receiveModal').modal('hide');
+                                        get_object_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+            });
+        }
+        function redirect(accessory, id) {
+            sessionStorage.setItem(accessory + '_selected', id);
+            window.location.href = '/cmdb/accessory/' + accessory;
+        }
+    </script>
+{% endblock %}

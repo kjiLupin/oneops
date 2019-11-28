@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_cmdb.html' %}
+{% endblock %}
+{% block content %}
+    <!-- 自定义操作按钮-->
+    <div id="toolbar" class="form-inline">
+        <div class="form-group bootstrap-select ">
+            <select id="idc" class="dropdown-menu-right selectpicker" data-live-search="true">
+                <option value="" selected="selected">选择机房</option>
+                {% for idc in idc_list %}
+                    <option value="{{ idc.id }}">{{ idc.idc_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group bootstrap-select ">
+            <select id="status" class="dropdown-menu-right selectpicker" data-live-search="true">
+                <option value="" selected="selected">选择状态</option>
+                <option value="running">运行中</option>
+                <option value="down">宕机</option>
+                <option value="pause">暂停</option>
+                <option value="loss">未知</option>
+                <option value="error">错误</option>
+                <option value="ots">已下架</option>
+                <option value="deleted">已删除</option>
+            </select>
+        </div>
+        <div class="form-group ">
+            {% if perms.auth.perm_cmdb_asset_edit %}
+                <button id="btn_add" type="button" class="btn btn-default">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 添加虚拟机
+                </button>
+            {% endif %}
+        </div>
+    </div>
+    <!-- 列表的表格-->
+    <div class="table-responsive">
+        <table id="name-list" data-toggle="table" class="table table-striped table-hover"
+               style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        </table>
+    </div>
+
+    <!--添加模态框-->
+    <div class="modal fade" id="addModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">添加虚拟机</h4>
+                </div>
+                <div class="modal-body">
+                    <p hidden id="uperrorMsg" class="text-danger" style="color:red"></p> <!-- for error msg-->
+                    <form id="addForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <div class="form-group">
+                            <label for="hostname" class="col-sm-2 control-label">主机名<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="addhostname" name="hostname" placeholder="!重要!请勿乱填，要跟机器上一样！确保唯一！"
+                                       type="text" class="form-control" datatype="*" errormsg="格式不正确">
+                            </div>
+                        </div><!--主机名-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="login_address" class="col-sm-2 control-label">登陆IP<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="addlogin_address" name="login_address" class="form-control">
+                            </div>
+                        </div><!--登陆IP-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="parent_id" class="col-sm-2 control-label">宿主机<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <select id="addparent_id" name="parent_id" class="dropdown-menu-left selectpicker " data-live-search="true">
+                                    {% for host in machine_list %}
+                                        <option data-tokens="{{ host.hostname }}|{{ host.login_address }}" value="{{ host.id }}">{{ host.hostname }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="applicant" class="col-sm-2 control-label">申请人及理由<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="addapplicant" name="applicant" placeholder="张三 X项目" class="form-control">
+                            </div>
+                        </div><!---->
+
+                        <input id="addis_vm" name="is_vm" type="hidden" value="1" class="form-control">
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="addBtn">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!--更新模态窗-->
+    <div class="modal fade" id="updateModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">更新虚拟机</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="upForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input type="hidden" id="upid" name="id" class="form-control">
+                        <div class="form-group">
+                            <label for="hostname" class="col-sm-2 control-label">主机名<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="uphostname" name="hostname" type="text" readonly="readonly"
+                                       class="form-control" datatype="s2-16" errormsg="格式不正确">
+                            </div>
+                        </div><!--hostname-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="login_address" class="col-sm-2 control-label">登陆IP<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="uplogin_address" name="login_address" class="form-control">
+                            </div>
+                        </div><!--登陆IP-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="applicant" class="col-sm-2 control-label">申请人及理由<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upapplicant" name="applicant" placeholder="张三 X项目" class="form-control">
+                            </div>
+                        </div><!--applicant-->
+
+                        <input id="upis_vm" name="is_vm" type="hidden" value="1" class="form-control">
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" onclick="updateFunc()">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    {% load staticfiles %}
+    <script>
+        //获取列表
+        function get_name_list() {
+            // 采取异步请求
+            // 初始化table
+            $('#name-list').bootstrapTable('destroy').bootstrapTable({
+                method: 'get',
+                contentType: "application/x-www-form-urlencoded",
+                url: "{% url 'cmdb:server-list' %}",
+                striped: true,                      //是否显示行间隔色
+                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                pagination: true,                   //是否显示分页（*）
+                sortable: true,                     //是否启用排序
+                sortOrder: "asc",                   //排序方式
+                sidePagination: "server",           //分页方式：client客户端分页，server服务端分页（*）
+                pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
+                pageSize: 14,                       //每页的记录行数（*）
+                pageList: [20, 30, 50, 100],        //可供选择的每页的行数（*）
+                autoWidth: false,
+                showExport: true,                   //是否显示导出按钮
+                exportOptions: {
+                    fileName: 'virtual_machine'           //文件名称设置
+                },
+                search: true,                       //是否显示表格搜索
+                strictSearch: false,                //是否全匹配搜索
+                showColumns: true,                  //是否显示所有的列（选择显示的列）
+                showRefresh: true,                  //是否显示刷新按钮
+                minimumCountColumns: 2,             //最少允许的列数
+                clickToSelect: true,                //是否启用点击选中行
+                uniqueId: "id",                     //每一行的唯一标识，一般为主键列
+                showToggle: true,                   //是否显示详细视图和列表视图的切换按钮
+                cardView: false,                    //是否显示详细视图
+                detailView: true,                  //是否显示父子表
+                detailFormatter: function (index, row) {
+                    if (row.apps == "") {
+                        return row.disk.replace(/\n/g, '<br/>');
+                    }
+                    return (row.apps.replace(/ /g, '<br/>') +
+                            '<br/><br/>' +
+                            row.disk.replace(/\n/g, '<br/>'))
+                },
+                locale: 'zh-CN',                    //本地化
+                toolbar: "#toolbar",               //指明自定义的toolbar
+                queryParamsType: 'limit',
+                columns: [{
+                    title: '资产编号',
+                    field: 'aid',
+                    sortable: true,
+                    visible: false
+                }, {
+                    title: '主机名',
+                    field: 'hn',
+                    sortable: true
+                }, {
+                    title: 'IP',
+                    field: 'ips',
+                    formatter: function (value, row, index) {
+                        return substring(value, 15)
+                    }
+                }, {
+                    title: '应用环境',
+                    field: 'app_env',
+                    visible: false
+                }, {
+                    title: '应用',
+                    field: 'apps',
+                    formatter: function (value, row, index) {
+                        return substring(value, 7)
+                    }
+                }, {
+                    title: 'CPU/使用率',
+                    field: 'ct',
+                    sortable: true,
+                    formatter: function (value, row, index) {
+                        return value + "核/" + row.cu + "%"
+                    }
+                }, {
+                    title: '内存/使用率',
+                    field: 'mt',
+                    sortable: true,
+                    formatter: function (value, row, index) {
+                        return value + "/" + row.mu + "%"
+                    }
+                }, {
+                    title: '硬盘',
+                    field: 'disk',
+                    formatter: function (value, row, index) {
+                        return substring(value, 15)
+                    }
+                }, {
+                    title: '申请人',
+                    field: 'apt',
+                    sortable: true
+                }, {
+                    title: '状态',
+                    field: 'stat',
+                    sortable: true,
+                    formatter: function (value, row, index) {
+                        return machine_status[value]
+                    }
+                }, {
+                    title: '宿主机',
+                    field: 'pips'
+                }, {
+                    title: '部门',
+                    field: 'biz',
+                    visible: false
+                }, {
+                    title: '备注',
+                    field: 'cmt',
+                    visible: false
+                }, {
+                    title: '上次检测',
+                    field: 'dlc',
+                    sortable: true
+                }, {
+                    title: '操作',
+                    field: 'id',
+                    formatter: function (value, row, index) {
+                        {% if perms.auth.perm_cmdb_asset_edit %}
+                            var html = "<button class='btn btn-warning' disabled onclick=\"editFunc(" + row.id + ")\">编辑</button>"
+                            html += "<button class='btn btn-danger' onclick=\"delFunc(" + row.id + ")\">删除</button>"
+                            return html;
+                        {% endif %}
+                    }
+                }],
+                onLoadSuccess: function () {
+                },
+                onLoadError: function () {
+                    alert("数据加载失败！请检查接口返回信息和错误日志！");
+                },
+                queryParams: function (e) {
+                    return {
+                        limit: e.limit,
+                        offset: e.offset,
+                        sortName: e.sort,
+                        sortOrder: e.order,
+                        idc_id: $("#idc").val(),
+                        status: $("#status").val(),
+                        is_vm: 1,
+                        search: e.search
+                    }
+                },
+                onSearch: function (e) {
+                    //传搜索参数给服务器
+                    return {
+                        search: e.search
+                    }
+                },
+                responseHandler: function (res) {
+                    //在ajax获取到数据，渲染表格之前，修改数据源
+                    return res;
+                }
+            });
+
+        }
+
+        $("#idc").change(function () {
+            get_name_list();
+        });
+        $("#status").change(function () {
+            get_name_list();
+        });
+        //初始化数据
+        $(document).ready(function () {
+            get_name_list();
+        });
+
+        // 以下添加操作
+        /*点击按钮，显示添加模态窗*/
+        $("#btn_add").on('click',function(){
+            $('#addModal').modal('show');
+        });
+        //表单验证
+        $("#addForm").Validform({
+            btnSubmit:"#addBtn",
+            tiptype: 3
+        });
+        /*添加*/
+        $('#addForm').on('submit', function () {
+            var data = $('#addForm').serialize();
+            $.ajax({
+                url: "{% url 'cmdb:server-list' %}",
+                type: "post",
+                data: data,
+                success: function (res) {
+                    if (res.code == 0) {
+                        $('#addModal').modal('hide');
+                        swal({
+                        title:"success",
+                        text:"添加成功",
+                        type:"success",
+                        confirmButtonText:'确定'
+                        },function(){
+                            get_name_list();
+                         });
+                    } else {
+                        swal("操作失败", res.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    $('#addModal').modal('hide');
+                    swal("操作失败", res, "error");
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+            return false;
+        }); /*submit end*/
+
+        // 以下更新操作
+        /*点击按钮，显示更新模态窗,并获取该条数据信息*/
+        function editFunc(id) {
+            $.ajax({
+                url: "{% url 'cmdb:server-detail' %}" + id,
+                type: "get",
+                data: {},
+                success: function (data) {
+                    if (data.code == 0) {
+                        var data = data['result'];
+                        $('#updateModal').modal('show');
+                        $("#upid").val(data['id']);
+                        $("#uphostname").val(data['hostname']);
+                        $("#uplogin_address").val(data['login_address']);
+                        $("#upapplicant").val(data['applicant']);
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        }
+        /*更新信息*/
+        function updateFunc() {
+            swal({
+                    title: "是否确认更新？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var id = $("#upid").val();
+                        var data = $('#upForm').serialize();
+                        $.ajax({
+                            url: "{% url "cmdb:server-detail" %}" + id,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#addModal').modal('hide');
+                                        get_name_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+        }
+
+        // 以下删除操作
+        function delFunc(id) {
+            swal({
+                    title: "是否确认删除？",
+                    text: "该服务器将被永久删除！",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false
+                },
+                function () {
+                    $.ajax({
+                        url: "{% url "cmdb:server-detail" %}" + id,
+                        type: "delete",
+                        data: {},
+                        success: function (res) {
+                            console.log(res);
+                            if (res.code == 0) {
+                                swal({
+                                    title: "success",
+                                    text: "操作成功",
+                                    type: "success",
+                                    confirmButtonText: '确定'
+                                }, function () {
+                                    get_name_list();
+                                });
+                            } else {
+                                swal("操作失败", res.errmsg, "error");
+                            }
+                        },
+                        beforeSend: function (xhr, settings) {
+                            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                            }
+                        }
+                    });
+                });
+        }
+
+    </script>
+{% endblock %}

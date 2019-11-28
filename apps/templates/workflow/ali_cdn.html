@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'smart-wizard/css/smart_wizard.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_circles.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_arrows.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_dots.min.css' %}" rel="stylesheet">
+    <script src="{% static 'smart-wizard/js/jquery.smartWizard.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+		<h3>{{ wf_type }}：{{ wf_name }}</h3>
+		<div id="smartwizard">
+            <ul>
+                <li><a href="#step-1">流程申请<br/>
+                    <small>阿里云CDN刷新预热</small>
+                </a></li>
+                <li><a href="#step-2">流程审批<br/>
+                    <small>自助流程，无需管理员审批</small>
+                </a></li>
+                <li><a href="#step-3">流程结束<br/>
+                    <small>显示执行结果</small>
+                </a></li>
+            </ul>
+            <div>
+                <div id="step-1" class="row col-lg-12">
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                按URL刷新预热
+                            </div>
+                            <div class="panel-body">
+                                <div class="col-lg-8">
+                                    <form id="cdnFlushForm" class="form-horizontal  nice-validator n-yellow"
+                                          novalidate="novalidate">
+                                        {% csrf_token %}
+                                        <div class="form-group">
+                                            <label for="groups" class="col-sm-2 control-label">阿里云CDN：</label>
+                                            <div class="col-sm-6">
+                                                <select id="cdn" name="cdn" class="dropdown-menu-left selectpicker">
+                                                    <option value="" disabled>选择 CDN</option>
+                                                    {% for cdn in cdn_list %}
+                                                        <option value="{{ cdn.id }}">{{ cdn.get_supplier_display }}（{{ cdn.comment }}）</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">URL地址：</label>
+                                            <textarea class="form-control" rows="5"
+                                                      placeholder="weiPc/img/&#13;&#10;common/weiPc/"
+                                                      id="url_path" name="url_path"></textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">文件类型：</label>
+                                            <label class="radio-inline">
+                                                <input type="radio" name="src_type" id="src_type1"
+                                                       value="Directory" checked>目录
+                                            </label>
+                                            <label class="radio-inline">
+                                                <input type="radio" name="src_type" id="src_type2"
+                                                       value="File">文件
+                                            </label>
+                                        </div>
+                                        <div class="alert alert-info">
+                                            <i class="ace-icon fa fa-hand-o-right"> 提示：<br/>
+                                                1、输入更新的文件或目录例如weiPc/img/...<br/>
+                                                2、目录不可与文件同时刷新，必须分开刷新
+                                            </i>
+                                        </div>
+                                        <button id="cdnFlush" type="button" class="btn btn-primary">提交</button>
+                                    </form>
+                                </div>
+                                <!-- /.row (nested) -->
+                            </div>
+                            <!-- /.panel-body -->
+                        </div>
+                        <!-- /.panel -->
+                        <div class="panel panel-default">
+                            <div class="panel-heading">
+                                静态资源同步
+                            </div>
+                            <div class="panel-body">
+                                <div class="col-lg-8">
+                                    <form id="fileSyncForm" class="form-horizontal nice-validator n-yellow"
+                                          novalidate="novalidate">
+                                        {% csrf_token %}
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">文件或目录：</label>
+                                            <textarea type="text" rows=4 class="form-control" name="src_path"
+                                                      placeholder="weiPc/img/index/&#13;&#10;weiPc/img/member.png&#13;&#10;common/weiPc/"></textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-2 control-label">资源环境：</label>
+                                            <label class="radio-inline">
+                                                <input type="radio" name="src_env" id="src_env1" disabled
+                                                       value="pre-nginx" checked>测试UAT
+                                            </label>
+                                            <label class="radio-inline">
+                                                <input type="radio" name="src_env" id="src_env2" checked
+                                                       value="prod-nginx">生产PROD
+                                            </label>
+                                        </div>
+                                        <div class="alert alert-info">
+                                            <i class="ace-icon fa fa-hand-o-right"> 注意：多个项目换行，同步目录必须最后/结尾。4.0为common开头，例如common/weiPc/</i>
+                                        </div>
+                                        <button id="fileSync" type="button" class="btn btn-primary">同步</button>
+                                    </form>
+                                    <p id="ret"></p>
+                                </div>
+                            </div> <!-- /.panel-body -->
+                        </div> <!-- /.panel -->
+                </div>
+                <div id="step-2" class="col-lg-12">
+                </div>
+                <div id="step-3" class="col-lg-12">
+                </div>
+            </div>
+        </div>
+	</div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        //初始化数据
+        $(document).ready(function () {
+            // https://www.jqueryscript.net/other/Flexible-Bootstrap-Plugin-To-Create-Wizard-Style-Interface-Smart-Wizard.html
+            $('#smartwizard').smartWizard({
+                selected: 0,
+
+                // Allows to cycle the navigation of steps
+                cycleSteps: true,
+
+                // Language variables
+                lang: {
+                    next: 'Next',
+                    previous: 'Previous'
+                },
+
+                // step bar options
+                toolbarSettings: {
+                    toolbarPosition: 'bottom', // none, top, bottom, both
+                    toolbarButtonPosition: 'right', // left, right
+                    showNextButton: false, // show/hide a Next button
+                    showPreviousButton: false, // show/hide a Previous button
+                    toolbarExtraButtons: []
+                },
+
+                // Array of disabled Steps
+                disabledSteps: [],
+
+                // Highlight step with errors
+                errorSteps: [],
+
+                // Hidden steps
+                hiddenSteps: [],
+
+                // theme
+                theme: 'arrows',
+
+                // Effect on navigation, none/slide/fade
+                transitionEffect: 'fade'
+            });
+        });
+
+        $("#cdnFlush").click(function () {
+            var data = $('#cdnFlushForm').serialize();
+            $.ajax({
+                type: "post",
+                url: '{% url "workflow:flow-ali-cdn" %}',
+                data: data,
+                success: function (ret) {
+                    if (ret.code === 0) {
+                        window.location.href = 'url "workflow:flow-ali-cdn-detail"' + ret.id;
+                    } else {
+                        alert(ret.errmsg)
+                    }
+                }
+            })
+        });
+        $("#fileSync").click(function () {
+            var data = $('#fileSyncForm').serialize();
+            $.ajax({
+                type: "get",
+                url: "{% url 'workflow:api-sync-cs-file' version='v1' %}",
+                data: data,
+                success: function (ret) {
+                    $('#ret').empty();
+                    if (ret.code === 0) {
+                        $('#ret').append('<p>' + ret.result + '</p>');
+                    } else {
+                        $('#ret').append('<p>' + ret.errmsg + '</p>');
+                    }
+                }
+            })
+        })
+    </script>
+{% endblock %}

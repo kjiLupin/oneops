@@ -1,0 +1,1506 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'datepicker/datepicker3.css' %}" rel="stylesheet">
+    <script src="{% static 'datepicker/bootstrap-datepicker.js' %}"></script>
+    <script src="{% static 'echarts-2.2.7/js/echarts.min.js' %}"></script>
+    <style>
+        .popover {
+            max-width: none;
+        }
+    </style>
+
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_cmdb.html' %}
+{% endblock %}
+{% block content %}
+    <!-- 自定义操作按钮-->
+    <div id="toolbar" class="form-inline">
+        <div class="form-group bootstrap-select ">
+            <select id="idc" class="dropdown-menu-right selectpicker " data-live-search="true">
+                <option value="" selected="selected">选择机房</option>
+                {% for idc in idc_list %}
+                    <option value="{{ idc.id }}">{{ idc.idc_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group bootstrap-select ">
+            <select id="status" class="dropdown-menu-right selectpicker " data-live-search="true">
+                <option value="" selected="selected">选择状态</option>
+                <option value="running">运行中</option>
+                <option value="down">宕机</option>
+                <option value="pause">暂停</option>
+                <option value="loss">未知</option>
+                <option value="error">错误</option>
+                <option value="ots">已下架</option>
+                <option value="deleted">已删除</option>
+            </select>
+        </div>
+        <div class="form-group ">
+            {% if perms.auth.perm_cmdb_asset_edit %}
+                <button id="btn_add" type="button" class="btn btn-default">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 添加物理机
+                </button>
+                <button id="btn_multi_update" type="button" class="btn btn-default">
+                    <span class="glyphicon glyphicon-edit" aria-hidden="true"></span> 批量修改
+                </button>
+            {% endif %}
+        </div>
+    </div>
+    <!-- 列表的表格-->
+    <div class="table-responsive" style="overflow: visible !important;">
+        <table id="name-list" data-toggle="table" class="table table-striped table-hover"
+               style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        </table>
+    </div>
+
+    <!--添加模态框-->
+    <div class="modal fade" id="addModal">
+        <div class="modal-dialog" style="width:90%;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">添加物理机</h4>
+                </div>
+                <div class="modal-body">
+                    <p hidden id="uperrorMsg" class="text-danger" style="color:red"></p> <!-- for error msg-->
+                    <form id="addForm" class="form-horizontal  nice-validator n-yellow"
+                          novalidate="novalidate">
+                        <input name="is_vm" type="hidden" value="0" class="form-control">
+                        <div class="form-group">
+                            <label for="hostname" class="col-sm-2 control-label">主机名<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="addhostname" name="hostname" placeholder="!重要!请勿乱填，要跟机器上一样！确保唯一！"
+                                       type="text" class="form-control" datatype="s2-16" errormsg="格式不正确">
+                            </div>
+
+                            <label for="manage_address" class="col-sm-3 control-label">管理IP（iDRAC地址）<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <input id="addmanage_address" name="manage_address" placeholder="127.0.0.1" class="form-control">
+                            </div>
+                        </div><!--hostname/idc-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-2 control-label">IDC<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <select id="addidc" name='idc' class="dropdown-menu-left selectpicker " data-live-search="true">
+                                    <option value="0" selected="selected">请选择IDC</option>
+                                    {% for idc in idc_list %}
+                                        <option value="{{ idc.id }}">{{ idc.idc_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <label for="vlan" class="col-sm-2 control-label">VLan<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <select id="addvlan" name='vlan' class="dropdown-menu-left selectpicker" data-live-search="true">
+                                    {% for vlan in vlan_list %}
+                                        <option value="{{ vlan.id }}">{{ vlan.vlan_num }}({{ vlan.comment }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <label for="segment" class="col-sm-1 control-label">网段<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <select id="addsegment" name='segment' class="dropdown-menu-left selectpicker" data-live-search="true">
+                                    {% for segment in segment_list %}
+                                        <option value="{{ segment.id }}">{{ segment.segment }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div><!--IDC/Vlan/Segment-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="ip" class="col-md-2 control-label">IP<span class="red-fonts">*</span></label>
+                            <div class="col-md-2">
+                                <select name="ip" data-placeholder="请输入IP" id="addip"
+                                        class="dropdown-menu-left selectpicker" data-live-search="true">
+                                </select>
+                            </div>
+
+                            <label for="ip" class="col-md-2 control-label">MAC<span class="red-fonts">*</span></label>
+                            <div class="col-md-2">
+                                <input id="addmac_address" name="mac_address" placeholder="xx:xx:xx:xx:xx:xx" class="form-control">
+                            </div>
+
+                            <label for="login_address" class="col-sm-1 control-label">登陆IP<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <input id="addlogin_address" name="login_address" placeholder="127.0.0.1" class="form-control">
+                            </div>
+                        </div><!--IP-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="supplier" class="col-sm-2 control-label">供应商</label>
+                            <div class="col-sm-2">
+                                <input id="addsupplier" name="supplier" class="form-control">
+                            </div>
+                            <label for="supplier" class="col-sm-2 control-label">联系方式</label>
+                            <div class="col-sm-2">
+                                <input id="addsupplier_phone" name="supplier_phone" class="form-control">
+                            </div>
+                        </div><!--供应商-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="trade_date" class="col-sm-2 control-label">采购时间</label>
+                            <div class="col-sm-2">
+                                <input id="addtrade_date" name="trade_date" class="form-control">
+                            </div>
+                            <label for="expired_date" class="col-sm-2 control-label">过保时间</label>
+                            <div class="col-sm-2">
+                                <input id="addexpired_date" name="expired_date" class="form-control">
+                            </div>
+                        </div><!--采购时间/过保时间-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="model" class="col-sm-2 control-label">U数</label>
+                            <div class="col-sm-2">
+                                <input id="addmodel" name="model" class="form-control" datatype="n" errormsg="必须数字">
+                            </div>
+                            <label for="cabinet" class="col-sm-1 control-label">机柜</label>
+                            <div class="col-sm-2">
+                                <select id="addcabinet" name='cabinet' class="dropdown-menu-left selectpicker " data-live-search="true">
+                                </select>
+                            </div>
+                            <label for="cabinet_pos" class="col-sm-2 control-label">机柜槽位</label>
+                            <div class="col-sm-2">
+                                <input id="addcabinet_pos" name="cabinet_pos" datatype="n" errormsg="必须数字"
+                                       class="form-control">
+                            </div>
+                        </div><!--U数/机柜/机柜槽位-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="addproduct_name" class="col-sm-2 control-label">产品型号</label>
+                            <div class="col-sm-2">
+                                <input id="addproduct_name" name="product_name" class="form-control">
+                            </div>
+                            <label for="addsn" class="col-sm-1 control-label">SN</label>
+                            <div class="col-sm-2">
+                                <input id="addsn" name="sn" class="form-control">
+                            </div>
+                            <label for="addapplicant" class="col-sm-2 control-label">申请人</label>
+                            <div class="col-sm-2">
+                                <input id="addapplicant" name="applicant" placeholder="张三" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="comment" class="col-sm-2 control-label">备注<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="addcomment" name="comment" placeholder="X项目" class="form-control">
+                            </div>
+                        </div><!--Comment-->
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="addBtn">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!--更新模态窗-->
+    <div class="modal fade" id="updateModal">
+        <div class="modal-dialog" style="width:90%;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">更新物理机</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="upForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input type="hidden" id="upid" name="id" class="form-control">
+                        <input type="hidden" id="upstatus" name="status" class="form-control">
+                        <input type="hidden" name="is_vm" value=0 class="form-control">
+                        <div class="form-group">
+                            <label for="hostname" class="col-sm-2 control-label">主机名<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="uphostname" name="hostname" placeholder="!重要!请勿乱填，要跟机器上一样！确保唯一！"
+                                       type="text" class="form-control" datatype="s2-16" errormsg="格式不正确">
+                            </div>
+
+                            <label for="manage_address" class="col-sm-3 control-label">管理IP（iDRAC地址）<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <input id="upmanage_address" name="manage_address" placeholder="127.0.0.1" class="form-control">
+                            </div>
+                        </div><!--hostname/idc-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-2 control-label">IDC<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <select id="upidc" name='idc' class="dropdown-menu-left selectpicker " data-live-search="true">
+                                    <option value=0 selected="selected">请选择IDC</option>
+                                    {% for idc in idc_list %}
+                                        <option value="{{ idc.id }}">{{ idc.idc_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <label for="vlan" class="col-sm-2 control-label">VLan<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <select id="upvlan" name='vlan' class="dropdown-menu-left selectpicker" data-live-search="true">
+                                </select>
+                            </div>
+
+                            <label for="segment" class="col-sm-1 control-label">网段<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <select id="upsegment" name='segment' class="dropdown-menu-left selectpicker" data-live-search="true">
+                                </select>
+                            </div>
+                        </div><!--IDC/Vlan/Segment-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="ip" class="col-md-2 control-label">IP<span class="red-fonts">*</span></label>
+                            <div class="col-md-2">
+                                <select name="ip" data-placeholder="请输入IP" id="upip"
+                                        class="dropdown-menu-left selectpicker" data-live-search="true">
+                                </select>
+                            </div>
+
+                            <label for="ip" class="col-md-2 control-label">MAC<span class="red-fonts">*</span></label>
+                            <div class="col-md-2">
+                                <input id="upmac_address" name="mac_address" placeholder="xx:xx:xx:xx:xx:xx" class="form-control">
+                            </div>
+
+                            <label for="login_address" class="col-sm-1 control-label">登陆IP<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <input id="uplogin_address" name="login_address" placeholder="127.0.0.1" class="form-control">
+                            </div>
+                        </div><!--IP-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="supplier" class="col-sm-2 control-label">供应商</label>
+                            <div class="col-sm-2">
+                                <input id="upsupplier" name="supplier" class="form-control">
+                            </div>
+                            <label for="supplier" class="col-sm-2 control-label">联系方式</label>
+                            <div class="col-sm-2">
+                                <input id="upsupplier_phone" name="supplier_phone" class="form-control">
+                            </div>
+                        </div><!--供应商-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="trade_date" class="col-sm-2 control-label">采购时间</label>
+                            <div class="col-sm-2">
+                                <input id="uptrade_date" name="trade_date" class="form-control">
+                            </div>
+                            <label for="expired_date" class="col-sm-2 control-label">过保时间</label>
+                            <div class="col-sm-2">
+                                <input id="upexpired_date" name="expired_date" class="form-control">
+                            </div>
+                        </div><!--采购时间/过保时间-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="model" class="col-sm-2 control-label">U数</label>
+                            <div class="col-sm-2">
+                                <input id="upmodel" name="model" class="form-control" datatype="n" errormsg="必须数字">
+                            </div>
+                            <label for="cabinet" class="col-sm-1 control-label">机柜</label>
+                            <div class="col-sm-2">
+                                <select id="upcabinet" name='cabinet' class="dropdown-menu-left selectpicker " data-live-search="true">
+                                </select>
+                            </div>
+                            <label for="cabinet_pos" class="col-sm-2 control-label">机柜槽位</label>
+                            <div class="col-sm-2">
+                                <input id="upcabinet_pos" name="cabinet_pos" datatype="n" errormsg="必须数字"
+                                       class="form-control">
+                            </div>
+                        </div><!--U数/机柜/机柜槽位-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="addproduct_name" class="col-sm-2 control-label">产品型号</label>
+                            <div class="col-sm-2">
+                                <input id="upproduct_name" name="product_name" class="form-control">
+                            </div>
+                            <label for="addsn" class="col-sm-1 control-label">SN</label>
+                            <div class="col-sm-2">
+                                <input id="upsn" name="sn" class="form-control">
+                            </div>
+                            <label for="addapplicant" class="col-sm-2 control-label">申请人</label>
+                            <div class="col-sm-2">
+                                <input id="upapplicant" name="applicant" placeholder="张三" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="comment" class="col-sm-2 control-label">备注<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upcomment" name="comment" placeholder="X项目" class="form-control">
+                            </div>
+                        </div><!--Comment-->
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" onclick="updateFunc()">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!--上架模态窗-->
+    <div class="modal fade" id="onTheShelfModal">
+        <div class="modal-dialog" style="width:1000px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">上架物理机</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="onTheShelfForm" class="form-horizontal  nice-validator n-yellow"
+                          novalidate="novalidate">
+                        <input type="hidden" id="otsid" name="id" class="form-control">
+                        <input type="hidden" id="otsstatus" name="status" class="form-control">
+                        <input name="is_vm" type="hidden" value=0 class="form-control">
+                        <div class="form-group">
+                            <label for="hostname" class="col-sm-2 control-label">主机名<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="otshostname" name="hostname" placeholder="!重要!请勿乱填，要跟机器上一样！确保唯一！"
+                                       type="text" class="form-control" datatype="s2-16" errormsg="格式不正确">
+                            </div>
+
+                            <label for="idc" class="col-sm-2 control-label">IDC<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <select id="otsidc" name='idc' class="dropdown-menu-left selectpicker " data-live-search="true">
+                                    <option value=0 selected="selected">全部</option>
+                                    {% for idc in idc_list %}
+                                        <option value="{{ idc.id }}">{{ idc.idc_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div><!--hostname/idc-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="login_address" class="col-sm-2 control-label">登陆IP<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="otslogin_address" name="login_address" class="form-control">
+                            </div>
+                            <label for="manage_address" class="col-sm-2 control-label">管理IP（iDRAC地址）<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="otsmanage_address" name="manage_address" class="form-control">
+                            </div>
+                        </div><!--登陆IP/管理IP-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="supplier" class="col-sm-2 control-label">供应商</label>
+                            <div class="col-sm-4">
+                                <input id="otssupplier" name="supplier" class="form-control">
+                            </div>
+                            <label for="supplier" class="col-sm-2 control-label">联系方式</label>
+                            <div class="col-sm-4">
+                                <input id="otssupplier_phone" name="supplier_phone" class="form-control">
+                            </div>
+                        </div><!--供应商-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="trade_date" class="col-sm-2 control-label">采购时间</label>
+                            <div class="col-sm-4">
+                                <input id="otstrade_date" name="trade_date" class="form-control">
+                            </div>
+                            <label for="expired_date" class="col-sm-2 control-label">过保时间</label>
+                            <div class="col-sm-4">
+                                <input id="otsexpired_date" name="expired_date" class="form-control">
+                            </div>
+                        </div><!--采购时间/过保时间-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="model" class="col-sm-2 control-label">U数</label>
+                                <div class="col-sm-2">
+                                    <input id="otsmodel" name="model" class="form-control" datatype="n" errormsg="必须数字">
+                                </div>
+                            <label for="cabinet" class="col-sm-1 control-label">机柜</label>
+                            <div class="col-sm-3">
+                                <select id="otscabinet" name='cabinet' class="dropdown-menu-left selectpicker " data-live-search="true">
+                                </select>
+                            </div>
+                            <label for="cabinet_pos" class="col-sm-2 control-label">机柜槽位</label>
+                                <div class="col-sm-2">
+                                    <input id="otscabinet_pos" name="cabinet_pos" datatype="n" errormsg="必须数字" class="form-control">
+                                </div>
+                        </div><!--U数/机柜/机柜槽位-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="applicant" class="col-sm-2 control-label">申请人及理由<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="otsapplicant" name="applicant" placeholder="张三 X项目" class="form-control">
+                            </div>
+                        </div><!---->
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" onclick="onTheShelfSubmitFunc()">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!-- 下架模态窗-->
+    <div class="modal fade" id="offTheShelfModal">
+        <div class="modal-dialog" style="width: 1000px">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">下架物理机</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="offTheShelfForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input type="hidden" id="offtsid" name="id" class="form-control">
+                        <input type="hidden" id="offtsstatus" name="status" class="form-control">
+                        <input name="is_vm" type="hidden" value=0 class="form-control">
+                        <div class="form-group">
+                            <label for="hostname" class="col-sm-2 control-label">主机名</label>
+                            <div class="col-sm-4">
+                                <input id="offtshostname" name="hostname"
+                                       type="text" class="form-control" readonly="readonly">
+                            </div>
+
+                            <label for="idc" class="col-sm-2 control-label">IDC</label>
+                            <div class="col-sm-4">
+                                <select id="offtsidc" name='idc' class="dropdown-menu-left selectpicker " disabled="disabled">
+                                    <option value=0 selected="selected">全部</option>
+                                    {% for idc in idc_list %}
+                                        <option value="{{ idc.id }}">{{ idc.idc_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div><!--hostname/idc-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="login_address" class="col-sm-2 control-label">登陆IP</label>
+                            <div class="col-sm-4">
+                                <input id="offtslogin_address" name="login_address" class="form-control" readonly="readonly">
+                            </div>
+                            <label for="manage_address" class="col-sm-2 control-label">管理IP（iDRAC地址）</label>
+                            <div class="col-sm-4">
+                                <input id="offtsmanage_address" name="manage_address" class="form-control" readonly="readonly">
+                            </div>
+                        </div><!--登陆IP/管理IP-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="supplier" class="col-sm-2 control-label">供应商</label>
+                            <div class="col-sm-4">
+                                <input id="offtssupplier" name="supplier" class="form-control" readonly="readonly">
+                            </div>
+                            <label for="supplier" class="col-sm-2 control-label">联系方式</label>
+                            <div class="col-sm-4">
+                                <input id="offtssupplier_phone" name="supplier_phone" class="form-control" readonly="readonly">
+                            </div>
+                        </div><!--供应商-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="trade_date" class="col-sm-2 control-label">采购时间</label>
+                            <div class="col-sm-4">
+                                <input id="offtstrade_date" name="trade_date" class="form-control" readonly="readonly">
+                            </div>
+                            <label for="expired_date" class="col-sm-2 control-label">过保时间</label>
+                            <div class="col-sm-4">
+                                <input id="offtsexpired_date" name="expired_date" class="form-control" readonly="readonly">
+                            </div>
+                        </div><!--采购时间/过保时间-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="model" class="col-sm-2 control-label">U数</label>
+                            <div class="col-sm-2">
+                                <input id="offtsmodel" name="model" class="form-control" readonly="readonly">
+                            </div>
+                            <label for="cabinet" class="col-sm-2 control-label">机柜</label>
+                            <div class="col-sm-2">
+                                <select id="offtscabinet" name='cabinet' class="dropdown-menu-left selectpicker " disabled="disabled">
+                                </select>
+                            </div>
+                            <label for="cabinet_pos" class="col-sm-2 control-label">机柜槽位</label>
+                            <div class="col-sm-2">
+                                <input id="offtscabinet_pos" name="cabinet_pos" readonly="readonly"
+                                       class="form-control">
+                            </div>
+                        </div><!--U数/机柜/机柜槽位-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="applicant" class="col-sm-2 control-label">下架理由<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="offtscomment" name="comment" placeholder="请认真填写下架理由！" class="form-control">
+                            </div>
+                        </div><!---->
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" onclick="offTheShelfSubmitFunc()">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <div class="modal fade" id="multiUpdateModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">批量更新物理机（无需更新的字段请留空）</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="multiUpdateForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate"
+                    action="{% url 'cmdb:server-template-import' %}" enctype="multipart/form-data" method="post">
+                        <input name="is_vm" type="hidden" value=0 class="form-control">
+                        <div class="form-group">
+                            <label for="" class="col-sm-2 control-label">模板：</label>
+                            <div class="col-sm-8">
+                                <a href="{% url 'cmdb:server-template-export' %}" style="display: block">下载</a>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="server" class="col-sm-2 control-label">文件：</label>
+                            <div class="col-sm-8">
+                                <input id="server" name="files" type="file" >
+                            </div>
+                            <span class="help-block red-fonts"></span>
+                        </div>
+                    </form>
+                    <p>
+                        <p class="text-warning" id="id_updated"></p>
+                        <p id="id_updated_detail"></p>
+                        <p class="text-danger" id="id_failed"></p>
+                        <p id="id_failed_detail"></p>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button data-dismiss="modal" class="btn btn-white" type="button">取消</button>
+                    <button class="btn btn-primary" type="button" id="btn_multi_update_submit">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="maintModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">添加维保记录</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="maintForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input type="hidden" id="maintid" name="id" class="form-control">
+                        <input type="hidden" name="maint" value="add" class="form-control">
+                        <div class="form-group">
+                            <label for="hostname" class="col-sm-2 control-label">主机名</label>
+                            <div class="col-sm-4">
+                                <input id="maintname" name="hostname" class="form-control" readonly="readonly">
+                            </div>
+                        </div>
+                        <div class="form-group" >
+                            <label for="maintcontent" class="col-sm-2 control-label">维保记录</label>
+                            <div class="col-sm-8">
+                                <input id="maintcontent" name="content" class="form-control">
+                            </div>
+                        </div>
+                </div>
+                <div class="modal-footer">
+                    <button data-dismiss="modal" class="btn btn-white" type="button">取消</button>
+                    <button class="btn btn-primary" type="button" id="btn_maint">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="showModal">
+        <div class="modal-dialog" style="width: 60%">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div id="chartmain" style="width:200px; height: 200px;"></div>
+                </div> <!--modal-body-->
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        function get_name_list() {
+            // 采取异步请求
+            // 初始化table
+            $('#name-list').bootstrapTable('destroy').bootstrapTable({
+                method: 'get',
+                contentType: "application/x-www-form-urlencoded",
+                url: "{% url 'cmdb:server-list' %}",
+                striped: true,                      //是否显示行间隔色
+                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                pagination: true,                   //是否显示分页（*）
+                sortable: true,                     //是否启用排序
+                sortOrder: "asc",                   //排序方式
+                sidePagination: "server",           //分页方式：client客户端分页，server服务端分页（*）
+                pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
+                pageSize: 14,                       //每页的记录行数（*）
+                pageList: [20, 30, 50, 100],        //可供选择的每页的行数（*）
+                autoWidth: false,
+                showExport: true,                   //是否显示导出按钮
+                exportOptions: {
+                    fileName: 'physical_machine'           //文件名称设置
+                },
+                search: true,                       //是否显示表格搜索
+                strictSearch: false,                //是否全匹配搜索
+                showColumns: true,                  //是否显示所有的列（选择显示的列）
+                showRefresh: true,                  //是否显示刷新按钮
+                minimumCountColumns: 2,             //最少允许的列数
+                clickToSelect: true,                //是否启用点击选中行
+                uniqueId: "id",                     //每一行的唯一标识，一般为主键列
+                showToggle: true,                   //是否显示详细视图和列表视图的切换按钮
+                cardView: false,                    //是否显示详细视图
+                detailView: true,                  //是否显示父子表
+                detailFormatter: function (index, row) {
+                    var disk = "硬盘：</br>" + row.disk.replace(/\n/g, '<br/>');
+                    var maint = "维保记录：</br>" + row.maint.replace(/\n/g, '<br/>');
+                    return disk + '<br/>' + maint
+                },
+                locale: 'zh-CN',                    //本地化
+                toolbar: "#toolbar",               //指明自定义的toolbar
+                queryParamsType: 'limit',
+                columns: [{
+                    title: '资产编号',
+                    field: 'aid',
+                    sortable: true,
+                    visible: false
+                }, {
+                    title: '主机名',
+                    field: 'hn',
+                    sortable: true,
+                    formatter: function (value, row, index) {
+                        return "<a href=\""+"{% url 'cmdb:server-detail' %}"+row.id+"\">"+ value +"</a>"
+                    }
+                }, {
+                    title: 'IP',
+                    field: 'ips',
+                    formatter: function (value, row, index) {
+                        return substring(value, 15)
+                    }
+                }, {
+                    title: '操作系统',
+                    field: 'os',
+                    sortable: true,
+                    visible: false
+                }, {
+                    title: 'CPU核数/已分配/使用率',
+                    field: 'ct',
+                    sortable: true,
+                    formatter: function (value, row, index) {
+                        return value + "核/" + row.ca + "核/" + row.cu + "%" +
+                            '<a sid="'+row.id+'" class="btn btn-link abc"><i class="fa fa-bar-chart-o fa-fw"></i></a>'
+                    }
+                }, {
+                    title: '内存/使用率',
+                    field: 'mt',
+                    sortable: true,
+                    formatter: function (value, row, index) {
+                        return value + "/" + row.mu + "%"
+                    }
+                }, {
+                    title: '硬盘',
+                    field: 'disk',
+                    formatter: function (value, row, index) {
+                        return substring(value, 15)
+                    }
+                }, {
+                    title: '登陆地址',
+                    field: 'la',
+                    visible: false,
+                    sortable: true
+                }, {
+                    title: '管理地址',
+                    field: 'ma',
+                    sortable: true
+                }, {
+                    title: '虚拟机数量',
+                    field: 'vc',
+                    sortable: true
+                }, {
+                    title: 'IDC',
+                    field: 'idc',
+                    sortable: true
+                }, {
+                    title: '机柜',
+                    field: 'cab',
+                    sortable: true
+                }, {
+                    title: '槽位',
+                    field: 'cp',
+                    sortable: true
+                }, {
+                    title: '型号',
+                    field: 'pn',
+                    visible: false,
+                    sortable: true
+                }, {
+                    title: 'U数',
+                    field: 'mod',
+                    visible: false,
+                    sortable: true
+                }, {
+                    title: '状态',
+                    field: 'stat',
+                    sortable: true,
+                    formatter: function (value, row, index) {
+                        return machine_status[value]
+                    }
+                }, {
+                    title: 'SN',
+                    field: 'sn',
+                    sortable: true
+                }, {
+                    title: '上架时间',
+                    field: 'dc',
+                    visible: false,
+                    sortable: true
+                }, {
+                    title: '硬件出厂',
+                    field: 'rd',
+                    visible: false,
+                    sortable: true
+                }, {
+                    title: '采购时间',
+                    field: 'td',
+                    visible: false,
+                    sortable: true
+                }, {
+                    title: '过保时间',
+                    field: 'ed',
+                    visible: false,
+                    sortable: true
+                }, {
+                    title: '部门',
+                    field: 'biz',
+                    visible: false
+                }, {
+                    title: '备注',
+                    field: 'cmt'
+                }, {
+                    title: '上次检测',
+                    field: 'dlc',
+                    sortable: true
+                }, {
+                    title: '操作',
+                    field: 'stat',
+                    formatter: function (value, row, index) {
+                        {% if perms.auth.perm_cmdb_asset_edit %}
+                            if (value == 'delete') {
+                                return
+                            } else if (value == 'ots') {
+                                html = "<button class='btn btn-primary' onclick=\"onTheShelfFunc(" + row.id + ")\">上架</button>"
+                            } else {
+                                var html = "<button class='btn btn-warning' onclick=\"editFunc(" + row.id + ")\">编辑</button>"
+                                html += "<button class='btn btn-info' onclick=\"maintFunc(" + row.id + ")\">维保</button>"
+                                html += "<button class='btn btn-primary' onclick=\"offTheShelfFunc(" + row.id + ")\">下架</button>"
+                                html += "<button class='btn btn-danger' onclick=\"delFunc(" + row.id + ")\">删除</button>"
+                            }
+                            return html;
+                        {% endif %}
+                    }
+                }],
+                onLoadSuccess: function () {
+                    var ss = $(".abc");
+                    for(var i=0;i<ss.length;i++){
+                        var sid = ss[i].getAttribute('sid');
+                        console.log(ss[i].getAttribute('sid'));
+                        $(ss[i]).popover({
+                            trigger: 'hover',
+                            placement: 'right',
+                            delay: {show: 1000, hide: 100},
+                            title: 'CPU/Memory Used Percent(%)',
+                            html: 'true',
+                            content: '<div id="chartmain'+sid+'" style="width:400px; height: 300px;"></div>',
+                            animation: true
+                        }).on("mouseenter", function () {
+                            var _this = this;
+                            $(this).popover("show");
+                            var sid = this.getAttribute('sid');
+                            $.ajax({
+                                url: "{% url 'cmdb:api-server-res-usage' version='v1' %}",
+                                type: "get",
+                                data: {"server_id": sid},
+                                success: function (res) {
+                                    console.log(res);
+                                    var option = {
+                                        title: {
+                                            text: ''
+                                        },
+                                        tooltip: {
+                                            trigger: 'axis'
+                                        },
+                                        legend: {
+                                            data: ['CPU', 'Memory']
+                                        },
+                                        grid: {
+                                            left: '3%',
+                                            right: '4%',
+                                            bottom: '3%',
+                                            containLabel: true
+                                        },
+                                        toolbox: {
+                                            feature: {
+                                                saveAsImage: {}
+                                            }
+                                        },
+                                        xAxis: {
+                                            type: 'category',
+                                            boundaryGap: false,
+                                            data: res.date_time
+                                        },
+                                        yAxis: {
+                                            type: 'value'
+                                        },
+                                        series: [
+                                            {
+                                                name: 'CPU',
+                                                type: 'line',
+                                                stack: '总量',
+                                                data: res.cpu_used
+                                            },
+                                            {
+                                                name: 'Memory',
+                                                type: 'line',
+                                                stack: '总量',
+                                                data: res.memory_used
+                                            }
+                                        ]
+                                    };
+                                    // console.log(document.getElementById('chartmain' + sid));
+                                    var myChart = echarts.init(document.getElementById('chartmain' + sid));
+                                    myChart.setOption(option, true);
+                                },
+                                error: function (res) {
+                                    console.log(res);
+                                },
+                                beforeSend: function (xhr, settings) {
+                                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                    }
+                                }
+                            });
+                            $(this).siblings(".popover").on("mouseleave", function () {
+                                $(_this).popover('hide');
+                            });
+                        }).on("mouseleave", function () {
+                            var _this = this;
+                            setTimeout(function () {
+                                if (!$(".popover:hover").length) {
+                                    $(_this).popover("hide")
+                                }
+                            }, 500);
+                        });
+                    }
+                },
+                onLoadError: function () {
+                    alert("数据加载失败！请检查接口返回信息和错误日志！");
+                },
+                queryParams: function (e) {
+                    return {
+                        limit: e.limit,
+                        offset: e.offset,
+                        sortName: e.sort,
+                        sortOrder: e.order,
+                        idc_id: $("#idc").val(),
+                        status: $("#status").val(),
+                        is_vm: 0,
+                        search: e.search
+                    }
+                },
+                onSearch: function (e) {
+                    //传搜索参数给服务器
+                    return {
+                        search: e.search
+                    }
+                },
+                responseHandler: function (res) {
+                    //在ajax获取到数据，渲染表格之前，修改数据源
+                    return res;
+                }
+            });
+
+        }
+
+        $("#idc").change(function () {
+            get_name_list();
+        });
+        $("#status").change(function () {
+            get_name_list();
+        });
+        //初始化数据
+        $(document).ready(function () {
+            get_name_list();
+        });
+
+        $("#addidc").change(function () {
+            getVLan({
+                "url": "{% url 'cmdb:vlan-list' %}",
+                "select_id": 'addvlan',
+                "idc_id": $(this).children('option:selected').val(),
+                "vlan_id": null
+            });
+            getCabinet({
+                "url": "{% url 'cmdb:cabinet-list' %}",
+                "select_id": 'addcabinet',
+                "idc_id": $(this).children('option:selected').val(),
+                "cabinet_id": null
+            });
+        });
+        $("#upidc").change(function () {
+            getCabinet({
+                "url": "{% url 'cmdb:cabinet-list' %}",
+                "select_id": 'upcabinet',
+                "idc_id": $(this).children('option:selected').val(),
+                "cabinet_id": null
+            });
+            getVLan({
+                "url": "{% url 'cmdb:vlan-list' %}",
+                "select_id": 'upvlan',
+                "idc_id": $(this).children('option:selected').val(),
+                "vlan_id": null
+            });
+        });
+        $("#upvlan").change(function () {
+            getNetworkSegment({
+                "url": "{% url 'cmdb:segment-list' %}",
+                "select_id": 'upsegment',
+                "idc_id": $("#upidc").val(),
+                "vlan_id": $(this).children('option:selected').val(),
+                "segment_id": null
+            });
+        });
+        $("#upsegment").change(function () {
+            getIp({
+                "url": "{% url 'cmdb:ip-list' %}",
+                "select_id": 'upip',
+                "segment_id": $(this).children('option:selected').val(),
+                "ip": null
+            });
+        });
+        $("#otsidc").change(function () {
+            getCabinet({
+                "url": "{% url 'cmdb:cabinet-list' %}",
+                "select_id": 'otscabinet',
+                "idc_id": $(this).children('option:selected').val(),
+                "cabinet_id": null
+            });
+        });
+        $("#addvlan").change(function () {
+            getNetworkSegment({
+                "url": "{% url 'cmdb:segment-list' %}",
+                "select_id": 'addsegment',
+                "idc_id": $("#addidc").val(),
+                "vlan_id": $(this).children('option:selected').val(),
+                "segment_id": null
+            });
+        });
+        $("#addsegment").change(function () {
+            getAvailableIp({
+                "url": "{% url 'cmdb:ip-list' %}",
+                "segment_id": $(this).children('option:selected').val()
+            });
+        });
+        // 以下添加操作
+        /*点击按钮，显示添加模态窗*/
+        $("#btn_add").on('click',function(){
+            $('#addtrade_date').datepicker({format: 'yyyy-mm-dd'});
+            $('#addexpired_date').datepicker({format: 'yyyy-mm-dd'});
+            $('#addModal').modal('show');
+        });
+        //表单验证
+        $("#addForm").Validform({
+            btnSubmit:"#addBtn",
+            tiptype: 3
+        });
+        /*添加*/
+        $('#addForm').on('submit', function () {
+            var data = $('#addForm').serialize();
+            $.ajax({
+                url: "{% url 'cmdb:server-list' %}",
+                type: "post",
+                data: data,
+                success: function (res) {
+                    if (res.code == 0) {
+                        swal({
+                        title:"success",
+                        text:"添加成功",
+                        type:"success",
+                        confirmButtonText:'确定'
+                        },function(){
+                            $('#addModal').modal('hide');
+                            get_name_list()
+                         });
+                    } else {
+                        swal("操作失败", res.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    $('#addModal').modal('hide');
+                    swal("操作失败", res, "error");
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+            return false;
+        }); /*submit end*/
+
+        // 以下更新操作
+        /*点击按钮，显示更新模态窗,并获取该条数据信息*/
+        function editFunc(id) {
+            $.ajax({
+                url: "{% url 'cmdb:server-detail' %}" + id,
+                type: "get",
+                data: {},
+                success: function (data) {
+                    if (data.code == 0) {
+                        var data = data['result'];
+                        $('#upForm')[0].reset();
+                        reShowForm(data, 'upForm');
+
+                        $("#upidc").selectpicker('val',(data['idc_id']));
+                        $('#upidc').selectpicker('refresh');
+                        $('#updateModal').modal('show');
+
+                        getVLan({
+                            "url": "{% url 'cmdb:vlan-list' %}",
+                            "select_id": 'upvlan',
+                            "idc_id": data['idc_id'],
+                            "vlan_id": data['vlan_id']
+                        });
+                        getNetworkSegment({
+                            "url": "{% url 'cmdb:segment-list' %}",
+                            "select_id": 'upsegment',
+                            "idc_id": data['idc_id'],
+                            "vlan_id": data['vlan_id'],
+                            "segment_id": data['segment_id']
+                        });
+                        getIp({
+                            "url": "{% url 'cmdb:ip-list' %}",
+                            "select_id": 'upip',
+                            "segment_id": data['segment_id'],
+                            "ip": data['ip']
+                        });
+                        getCabinet({
+                            "url": "{% url 'cmdb:cabinet-list' %}",
+                            "select_id": 'upcabinet',
+                            "idc_id": data['idc_id'],
+                            "cabinet_id": data['cabinet_id']
+                        });
+
+                        $('#uptrade_date').datepicker({format: 'yyyy-mm-dd'});
+                        $('#upexpired_date').datepicker({format: 'yyyy-mm-dd'});
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        }
+        /*更新信息*/
+        function updateFunc() {
+            swal({
+                    title: "是否确认更新？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var id = $("#upid").val();
+                        var data = $('#upForm').serialize();
+                        $.ajax({
+                            url: "{% url "cmdb:server-detail" %}" + id,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#updateModal').modal('hide');
+                                        get_name_list()
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+        }
+        // 上架服务器
+        function onTheShelfFunc(id) {
+            $.ajax({
+                url: "{% url 'cmdb:server-detail' %}" + id,
+                type: "get",
+                data: {},
+                success: function (data) {
+                    if (data.code == 0) {
+                        var data = data['result'];
+                        $('#onTheShelfForm')[0].reset();
+                        reShowForm(data, 'onTheShelfForm');
+                        $('#onTheShelfModal').modal('show');
+                        $('#otsstatus').val('loss');
+                        $("#otsidc").selectpicker('val',(data['idc_id']));
+                        $('#otsidc').selectpicker('refresh');
+
+                        getCabinet({
+                            "url": "{% url 'cmdb:cabinet-list' %}",
+                            "select_id": 'otscabinet',
+                            "idc_id": data['idc_id'],
+                            "cabinet_id": data['cabinet_id']
+                        });
+
+                        $('#otstrade_date').datepicker({format: 'yyyy-mm-dd'});
+                        $('#otsexpired_date').datepicker({format: 'yyyy-mm-dd'});
+
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        }
+        function onTheShelfSubmitFunc() {
+            swal({
+                    title: "是否确认上架服务器？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var id = $("#otsid").val();
+                        var data = $('#onTheShelfForm').serialize();
+                        $.ajax({
+                            url: "{% url "cmdb:server-detail" %}" + id,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "上架操作",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#onTheShelfModal').modal('hide');
+                                        get_name_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+        }
+        function maintFunc(id) {
+            $.ajax({
+                url: "{% url 'cmdb:server-detail' %}" + id,
+                type: "get",
+                data: {},
+                success: function (data) {
+                    if (data.code == 0) {
+                        var data = data['result'];
+                        $('#maintForm')[0].reset();
+                        reShowForm(data, 'maintForm');
+                        $('#maintModal').modal('show');
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+            $('#btn_maint').unbind("click").click(function(){
+                swal({
+                    title: "是否确认添加该维保记录？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var data = $('#maintForm').serialize();
+                        $.ajax({
+                            url: "{% url 'cmdb:server-detail' %}" + id,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#maintModal').modal('hide');
+                                        get_name_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+            });
+        }
+        // 下架服务器
+        function offTheShelfFunc(id) {
+            $.ajax({
+                url: "{% url 'cmdb:server-detail' %}" + id,
+                type: "get",
+                data: {},
+                success: function (data) {
+                    if (data.code == 0) {
+                        var data = data['result'];
+                        $('#offTheShelfForm')[0].reset();
+                        reShowForm(data, 'offTheShelfForm');
+                        $('#offTheShelfModal').modal('show');
+                        $('#offtsstatus').val('ots');
+                        $("#offtsidc").selectpicker('val',(data['idc_id']));
+                        $('#offtsidc').selectpicker('refresh');
+
+                        getCabinet({
+                            "url": "{% url 'cmdb:cabinet-list' %}",
+                            "select_id": 'offtscabinet',
+                            "idc_id": data['idc_id'],
+                            "cabinet_id": data['cabinet_id']
+                        });
+
+                        $('#offtstrade_date').datepicker({format: 'yyyy-mm-dd'});
+                        $('#offtsexpired_date').datepicker({format: 'yyyy-mm-dd'});
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        }
+        function offTheShelfSubmitFunc() {
+            swal({
+                    title: "是否确认下架服务器？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var id = $("#offtsid").val();
+                        var data = $('#offTheShelfForm').serialize();
+                        $.ajax({
+                            url: "{% url "cmdb:server-detail" %}" + id,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "下架操作",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#offTheShelfModal').modal('hide');
+                                        get_name_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+        }
+        // 以下删除操作
+        function delFunc(id) {
+            swal({
+                    title: "是否确认删除？",
+                    text: "该服务器将被永久删除！",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false
+                },
+                function () {
+                    $.ajax({
+                        url: "{% url "cmdb:server-detail" %}" + id,
+                        type: "delete",
+                        data: {},
+                        success: function (res) {
+                            console.log(res);
+                            if (res.code == 0) {
+                                swal({
+                                    title: "success",
+                                    text: "操作成功",
+                                    type: "success",
+                                    confirmButtonText: '确定'
+                                }, function () {
+                                    get_name_list();
+                                });
+                            } else {
+                                swal("操作失败", res.errmsg, "error");
+                            }
+                        },
+                        beforeSend: function (xhr, settings) {
+                            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                            }
+                        }
+                    });
+                });
+        }
+
+        $("#btn_multi_update").on('click',function(){
+            $('#multiUpdateModal').modal('show');
+        });
+        $("#btn_multi_update_submit").on('click',function(){
+            var $form = $('#multiUpdateForm');
+            swal({
+                    title: "导入确认",
+                    text: "是否确认批量更新这些服务器信息？",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消"
+                },
+                function () {
+                    $form.find('.help-block').remove();
+                    function success(data) {
+                        // console.log(data);
+                        $('<span />', {class: 'help-block text-danger'}).html(data.msg).insertAfter($('#server'));
+                        if (data.code === 0) {
+                            var obj = document.getElementById('server');
+                            obj.outerHTML = obj.outerHTML;
+                            $('#id_updated').html(data.updated_info);
+                            $('#id_updated_detail').html(data.updated.join('</br>'));
+                            $('#id_failed').html(data.failed_info);
+                            $('#id_failed_detail').html(data.failed.join('</br>'));
+                        } else {
+                            $('#id_updated').html('');
+                            $('#id_updated_detail').html('');
+                            $('#id_failed').html('');
+                            $('#id_failed_detail').html('');
+                        }
+                    }
+                    $form.ajaxSubmit({success: success});
+                });
+        });
+
+    </script>
+{% endblock %}

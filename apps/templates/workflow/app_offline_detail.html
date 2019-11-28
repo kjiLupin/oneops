@@ -1,0 +1,719 @@
+{% extends "base.html" %}
+{% load workflow %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'smart-wizard/css/smart_wizard.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_circles.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_arrows.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_dots.min.css' %}" rel="stylesheet">
+    <link href="{% static 'bootstrap-multiselect/css/bootstrap-multiselect.css' %}" rel="stylesheet">
+    <script src="{% static 'smart-wizard/js/jquery.smartWizard.min.js' %}"></script>
+    <script src="{% static 'layer-v3.1.1/layer.js' %}"></script>
+    <script src="{% static 'ace/ace.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="modal fade" id="createModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">Ops系统 创建项目</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="addForm" class="form-horizontal nice-validator n-yellow"
+                          novalidate="novalidate">
+                        <div class="form-group">
+                            <label for="createapp_code" class="control-label col-sm-3">项目名：</label>
+                            <div class="col-sm-6">
+                                <input id="app_code" name="name" placeholder="assetmng" readonly
+                                       class="form-control" datatype="*" errormsg="填写错误">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">运行环境：</label>
+                            <div class="col-sm-4">
+                                <select id="app_type" name="language" class="form-control" readonly>
+                                    <option value="WAR">WAR</option>
+                                    <option value="JAR">JAR</option>
+                                </select>
+                            </div>
+                        </div> <!--项目类型-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">项目路径：</label>
+                            <div class="col-sm-6">
+                                <input name="path" class="form-control" placeholder="可不填写"/>
+                            </div>
+                        </div> <!--项目路径添加-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">项目组: </label>
+                            <div class="col-sm-6">
+                                <select id="p_group" name="p_group" class="form-control multiselect"
+                                        multiple="multiple"></select>
+                            </div>
+                        </div> <!-- 项目组-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">状态：</label>
+                            <div class="col-sm-6">
+                                <select name="is_lock" class="form-control">
+                                    <option value="0" selected>正常</option>
+                                    <option value="1">锁定</option>
+                                </select>
+                            </div>
+                        </div> <!--状态选择-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">备注：</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" id="comment" name="comment"/>
+                            </div>
+                        </div> <!--备注-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">部署脚本：</label>
+                            <div class="col-sm-6">
+                                <input id="p_script" class="form-control" readonly name="script"/>
+                            </div>
+                        </div> <!--部署脚本-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">TOMCAT目录：</label>
+                            <div class="col-sm-6">
+                                <input id="p_tomcat" name="tomcat" readonly
+                                       class="form-control"/>
+                            </div>
+                        </div> <!--TOMCAT目录-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">项目包：</label>
+                            <div class="col-sm-6">
+                                <input id="p_war" name="war" readonly
+                                           class="form-control"/>
+                            </div>
+                        </div> <!--项目包-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">预发组：</label>
+                            <div class="col-sm-6">
+                                <input id="p_prehost" class="form-control" placeholder="与ansible-hosts对应"
+                                          name="prehost"/>
+                            </div>
+                        </div> <!--预发主机组-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">Beta组：</label>
+                            <div class="col-sm-6">
+                                <input id="p_host1" class="form-control" placeholder="与ansible-hosts对应"
+                                          name="host1"/>
+                            </div>
+                        </div> <!--主机组1-->
+                        <div class="form-group">
+                            <label class="control-label col-sm-3">生产组：</label>
+                            <div class="col-sm-6">
+                                <input id="p_host2" class="form-control" placeholder="与ansible-hosts对应"
+                                          name="host2"/>
+                            </div>
+                        </div> <!--主机组2-->
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button class="btn btn-warning" data-dismiss="modal">取消</button>
+                                <button class="btn btn-primary" id="createBtn">创建</button>
+                            </div>
+                        </div>
+                    </form>
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+    <div class="container">
+		<h3>{{ wf_type }}：{{ wf_name }}</h3>
+		<div id="smartwizard">
+            <ul>
+                <li><a href="#step-1">一、<br/>
+                    <small>开发填写申请单</small>
+                </a></li>
+                <li><a href="#step-2">二、<br/>
+                    <small>下线Dubbo/Nginx</small>
+                </a></li>
+                <li><a href="#step-3">三、<br/>
+                    <small>禁用Zabbix监控</small>
+                </a></li>
+                <li><a href="#step-4">四、<br/>
+                    <small>停止应用进程，备份应用代码</small>
+                </a></li>
+                <li><a href="#step-5">五、<br/>
+                    <small>结束</small>
+                </a></li>
+            </ul>
+            <div>
+                <div id="step-1" class="col-lg-12">
+                </div>
+                <div id="step-2" class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            流程详细
+                        </div>
+                        <div class="panel-body">
+                            <pre>{{ content }}</pre>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        {% if current_step != 2 %}
+                            <!-- current_step 大于 2，则显示已预分配服务器信息 -->
+                            <div class="panel-heading">
+                                显示结果
+                            </div>
+                            <div class="panel-body">
+                                {% for fsl in fsl_list %}
+                                    {% ifequal fsl.flow_step.step 2 %}
+                                        <pre>{{ fsl.reply }}</pre>
+                                    {% endifequal %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="panel-heading">
+                                Dubbo/Nginx 下线该应用
+                            </div>
+                            <div class="panel-body">
+                                <form id="Form2" class="form-horizontal  nice-validator n-yellow"
+                                      novalidate="novalidate">
+                                    <input type="hidden" name="current_step" value="{{ current_step }}"
+                                           class="form-control">
+                                    <input type="hidden" name="app_id" value="{{ app_detail.id }}"
+                                           class="form-control">
+                                    <div class="form-group">
+                                        <label for="zone" class="col-sm-2 control-label">编码<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-4">
+                                            <input name="app_code" type="text" readonly
+                                                   value="{{ app_detail.app_code }}" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="type" class="col-sm-2 control-label">类型<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-2">
+                                            <select name="app_type" disabled
+                                                    class="dropdown-menu-left selectpicker ">
+                                                {% ifequal app_detail.app_type 'jar' %}
+                                                    <option value="jar" selected>JAR</option>
+                                                    <option value="war">WAR</option>
+                                                    {% else %}
+                                                    <option value="jar">JAR</option>
+                                                    <option value="war" selected>WAR</option>
+                                                {% endifequal %}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="data" class="col-sm-2 control-label">Tomcat端口<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-2">
+                                            <input name="tomcat_port" readonly
+                                                   class="form-control" value="{{ app_detail.tomcat_port }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="ttl" class="col-sm-2 control-label">描述</label>
+                                        <div class="col-sm-6">
+                                            <input name="comment" readonly
+                                                   value="{{ app_detail.comment }}" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label class="col-sm-2 control-label">Dubbo</label>
+                                        <div class="col-sm-4">
+                                            {% if request.user|chk_flow_perm:"app_offline:2" %}
+                                                <button type="button" class="btn btn-danger" onclick="">点击下线</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-danger" disabled onclick="">点击下线</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label class="col-sm-2 control-label">Nginx</label>
+                                        <div class="col-sm-4">
+                                            {% if request.user|chk_flow_perm:"app_offline:2" %}
+                                                <button type="button" class="btn btn-danger" onclick="">点击下线</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-danger" disabled onclick="">点击下线</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="modal-footer">
+                                            {% if request.user|chk_flow_perm:"app_offline:2" %}
+                                                <button type="button" class="btn btn-danger" onclick="stopFunc()">终止流程
+                                                </button>
+                                                <button type="button" class="btn btn-default" data-dismiss="modal">取消
+                                                </button>
+                                                <button type="button" class="btn btn-primary" onclick="doFunc('Form2')">下一步
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div> <!--button-->
+                                </form> <!--form-->
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div id="step-3" class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            流程详细
+                        </div>
+                        <div class="panel-body">
+                            <pre>{{ content }}</pre>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        {% if status != 'ongoing' or current_step != 3 %}
+                            <div class="panel-heading">
+                                显示结果
+                            </div>
+                            <div class="panel-body">
+                                {% for fsl in fsl_list %}
+                                    {% ifequal fsl.flow_step.step 3 %}
+                                        <pre>{{ fsl.reply }}</pre>
+                                    {% endifequal %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="panel-heading">
+                                Zabbix 监控项
+                            </div>
+                            <div class="panel-body">
+                                <form id="Form4" class="form-horizontal nice-validator n-yellow" novalidate="novalidate">
+                                    <input type="hidden" name="current_step" value="{{ current_step }}"
+                                           class="form-control">
+                                    <input type="hidden" name="app_id" value="{{ app_detail.id }}"
+                                           class="form-control">
+                                    <div class="form-group">
+                                        <label for="zone" class="col-sm-2 control-label">编码<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-2">
+                                            <input name="app_code" type="text" readonly
+                                                   value="{{ app_detail.app_code }}" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="data" class="col-sm-2 control-label">Tomcat端口<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-2">
+                                            <input name="tomcat_port" readonly
+                                                   class="form-control" value="{{ app_detail.tomcat_port }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label class="col-sm-2 control-label">描述</label>
+                                        <div class="col-sm-6">
+                                            <input name="comment" readonly
+                                                   value="{{ app_detail.comment }}" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label class="col-sm-2 control-label">Zabbix</label>
+                                        <div class="col-sm-8">
+                                            <!-- 自定义操作按钮-->
+                                            <div id="zabbix-toolbar" class="form-inline pull-left">
+                                                {% if request.user|chk_flow_perm:"app_offline:4" %}
+                                                    <button type="button" class="btn btn-danger" onclick="offMonitorItem()">点击禁用该应用的监控项</button>
+                                                {% else %}
+                                                    <button type="button" class="btn btn-danger" disabled>点击禁用该应用的监控项</button>
+                                                {% endif %}
+                                            </div>
+                                            <table id="app-host-list" data-toggle="table" class="table table-condensed"
+                                   style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></table>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="modal-footer">
+                                            {% if request.user|chk_flow_perm:"app_offline:4" %}
+                                                <button type="button" class="btn btn-danger" onclick="stopFunc()">终止流程</button>
+                                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                                <button type="button" class="btn btn-primary" onclick="doFunc('Form4')">确认</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div id="step-4" class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            流程详细
+                        </div>
+                        <div class="panel-body">
+                            <pre>{{ content }}</pre>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        {% if status != 'ongoing' or current_step != 4 %}
+                            <div class="panel-heading">
+                                显示结果
+                            </div>
+                            <div class="panel-body">
+                                停止应用进程，备份应用代码 脚本已执行！
+                            </div>
+                        {% else %}
+                            <div class="panel-heading">
+                                应用下线
+                            </div>
+                            <div class="panel-body">
+                                <form id="Form3" class="form-horizontal nice-validator n-yellow" novalidate="novalidate">
+                                    <input type="hidden" name="current_step" value="{{ current_step }}"
+                                           class="form-control">
+                                    <input type="hidden" name="app_id" value="{{ app_detail.id }}"
+                                           class="form-control">
+                                    <div class="form-group">
+                                        <label for="zone" class="col-sm-2 control-label">编码<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-4">
+                                            <input name="app_code" type="text" readonly
+                                                   value="{{ app_detail.app_code }}" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="type" class="col-sm-2 control-label">类型<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-2">
+                                            <select name="app_type" disabled
+                                                    class="dropdown-menu-left selectpicker ">
+                                                {% ifequal app_detail.app_type 'jar' %}
+                                                    <option value="jar" selected>JAR</option>
+                                                    <option value="war">WAR</option>
+                                                    {% else %}
+                                                    <option value="jar">JAR</option>
+                                                    <option value="war" selected>WAR</option>
+                                                {% endifequal %}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="data" class="col-sm-2 control-label">Tomcat端口<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-2">
+                                            <input name="tomcat_port" readonly
+                                                   class="form-control" value="{{ app_detail.tomcat_port }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="ttl" class="col-sm-2 control-label">描述</label>
+                                        <div class="col-sm-6">
+                                            <input name="comment" readonly
+                                                   value="{{ app_detail.comment }}" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label class="col-sm-4 control-label">停止应用进程，备份应用代码：</label>
+                                        <div class="col-sm-4">
+                                            {% if request.user|chk_flow_perm:"app_offline:3" %}
+                                                <button type="button" class="btn btn-danger" onclick="codeBackup()">立即执行</button>
+                                            {% else %}
+                                                <button type="button" class="btn btn-danger" disabled>立即执行</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="modal-footer">
+                                            {% if request.user|chk_flow_perm:"app_offline:3" %}
+                                                <button type="button" class="btn btn-danger" onclick="stopFunc()">终止流程</button>
+                                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                                <button type="button" class="btn btn-primary" onclick="doFunc('Form3')">下一步</button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div id="step-5" class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            流程详细
+                        </div>
+                        <div class="panel-body">
+                            <pre>{{ content }}</pre>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            显示结果
+                        </div>
+                        <div class="panel-body">
+                            该工单已结束！
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+
+    <div class="modal fade" id="execResultModal">
+        <div class="modal-dialog" style="width:80%">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">执行结果</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="box-footer">
+                        <pre id="execResult" style="background-color: #cccccc"></pre>
+                    </div>
+                </div> <!--modal-body-->
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        //初始化数据
+        $(document).ready(function () {
+            var status = "{{ status }}";
+            var current_step = {{ current_step }};
+            var disable_steps = [0, 1, 2, 3, 4, 5];
+            disable_steps.splice(1, current_step - 1);
+            $('#smartwizard').smartWizard({
+                selected: current_step - 1,
+                lang: {
+                    next: '下一步',
+                    previous: '上一步'
+                },
+                toolbarSettings: {
+                    toolbarPosition: 'bottom',      // none, top, bottom, both
+                    toolbarButtonPosition: 'right', // left, right
+                    showNextButton: true,           // show/hide a Next button
+                    showPreviousButton: true,       // show/hide a Previous button
+                    toolbarExtraButtons: []
+                },
+                disabledSteps: disable_steps,
+                theme: 'arrows',
+                transitionEffect: 'fade'
+            });
+            if (current_step === 3) {
+                $('#app-host-list').bootstrapTable('destroy').bootstrapTable({
+                    escape: true,
+                    method: 'get',
+                    contentType: "application/x-www-form-urlencoded",
+                    url: "{% url 'cmdb:api-app-detail' version='v1' %}" + "{{ app_detail.app_code }}",
+                    striped: true,                      //是否显示行间隔色
+                    cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                    sidePagination: "client",           //分页方式：client客户端分页，server服务端分页（*）
+                    pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
+                    pageSize: 14,                       //每页的记录行数（*）
+                    pageList: [10, 30, 50, 100],        //可供选择的每页的行数（*）
+                    showExport: false,
+                    search: false,                       //是否显示表格搜索
+                    strictSearch: false,                //是否全匹配搜索
+                    showColumns: false,                  //是否显示所有的列（选择显示的列）
+                    minimumCountColumns: 1,             //最少允许的列数
+                    clickToSelect: true,                //是否启用点击选中行
+                    uniqueId: "hostname",                //每一行的唯一标识，一般为主键列
+                    showToggle: false,                   //是否显示详细视图和列表视图的切换按钮
+                    cardView: false,                    //是否显示详细视图
+                    detailView: false,                   //是否显示父子表
+                    locale: 'zh-CN',                    //本地化
+                    toolbar: "#zabbix-toolbar",      //指明自定义的toolbar
+                    columns: [{
+                        title: '环境',
+                        field: 'env'
+                    }, {
+                        title: '主机名',
+                        field: 'hostname'
+                    }, {
+                        title: 'IP',
+                        field: 'ip'
+                    }],
+                    onLoadSuccess: function () {
+                    },
+                    onLoadError: function () {
+                        alert("数据加载失败！请检查接口返回信息和错误日志！");
+                    },
+                    onSearch: function (e) {
+                    },
+                    responseHandler: function (res) {
+                        var ret = [];
+                        for(var i = 0; i < res['result']['pre'].length; i++) {
+                            ret.push({'env': '预发',
+                                'hostname': res['result']['pre'][0]['hn'],
+                                'ip': res['result']['pre'][0]['ip'][0]
+                            });
+                        }
+                        for(var i = 0; i < res['result']['beta'].length; i++) {
+                            ret.push({'env': 'Beta',
+                                'hostname': res['result']['beta'][0]['hn'],
+                                'ip': res['result']['beta'][0]['ip'][0]
+                            });
+                        }
+                        for(var i = 0; i < res['result']['prod'].length; i++) {
+                            ret.push({'env': '正式',
+                                'hostname': res['result']['prod'][0]['hn'],
+                                'ip': res['result']['prod'][0]['ip'][0]
+                            });
+                        }
+                        return ret;
+                    }
+                });
+            }
+        });
+        function stopFunc() {
+            if (confirm("确认终止应用下线流程？")) {
+                $.ajax({
+                    url: "{% url 'workflow:flow-app-offline-detail' %}" + {{ flow_id }},
+                    type: "post",
+                    data: {
+                        "action": "stop",
+                        "current_step": {{ current_step }},
+                        "app_id": {{ app_detail.id }}
+                    },
+                    success: function (res) {
+                        if (res.code == 0) {
+                            swal({
+                                title: "success",
+                                text: res.result,
+                                type: "success",
+                                confirmButtonText: '确定'
+                            }, function () {
+                                window.location.href = "{% url 'workflow:flow-app-offline-detail' %}" + {{ flow_id }};
+                            });
+                        } else {
+                            swal("操作失败", res.errmsg, "error");
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        swal("操作失败", res, "error");
+                    },
+                    beforeSend: function (xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                        }
+                    }
+                });
+            }
+        }
+        $("#Form4").Validform({
+            tiptype: 3
+        });
+        function doFunc(formName) {
+            if (formName === 'Form2') {
+                if (confirm("是否确认 Dubbo/Nginx 已经下线？") === false) {
+                    return false;
+                }
+            } else if (formName === 'Form3') {
+                if (confirm("停止应用程序，备份应用代码 已完成？") === false) {
+                    return false;
+                }
+            } else if (formName === 'Form4') {
+                if (confirm("确认 Zabbix 相关监控项已经禁用？") === false) {
+                    return false;
+                }
+            }
+            var data = $('#' + formName).serialize();
+            $.ajax({
+                url: "{% url 'workflow:flow-app-offline-detail' %}" + {{ flow_id }},
+                type: "post",
+                data: data,
+                success: function (res) {
+                    if (res.code == 0) {
+                        swal({
+                            title: "success",
+                            text: res.result,
+                            type: "success",
+                            confirmButtonText: '确定'
+                        }, function () {
+                            window.location.href = "{% url 'workflow:flow-app-offline-detail' %}" + {{ flow_id }};
+                        });
+                    } else {
+                        swal("操作失败", res.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+            return false;
+        }
+        function codeBackup() {
+            if (confirm("是否杀掉服务器应用进程并备份代码目录？")) {
+                let ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+                let socket = new WebSocket(ws_scheme + '://' + window.location.host + "/ws/ansible/app/");
+                let data = {
+                    app_id: {{ app_detail.id }},
+                    action: "backup_code"
+                };
+                $('#execResultModal').modal('show');
+
+                socket.onopen = function () {
+                    $("#execResult").html('开始执行....\n');
+                    socket.send(JSON.stringify(data));
+                };
+
+                socket.onmessage = function (e) {
+                    $("#execResult").append(e.data)
+                };
+
+                socket.onclose = function () {
+                    $("#execResult").append('\n<code>执行完毕....</code>')
+                }
+            }
+        }
+        function offMonitorItem() {
+            if (confirm("是否禁用以下主机 对该应用的监控监控？")) {
+                $.ajax({
+                    url: "{% url 'workflow:api-app-offline-disable-monitor' version='v1' %}" + "{{ app_detail.app_code }}",
+                    type: "post",
+                    success: function (res) {
+                        if (res.code == 0) {
+                            swal("操作成功", res.result, "success");
+                        } else {
+                            swal("操作失败", res.errmsg, "error");
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        swal("操作失败", res, "error");
+                    },
+                    beforeSend: function (xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                        }
+                    }
+                });
+            }
+        }
+    </script>
+{% endblock %}

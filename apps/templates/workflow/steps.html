@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block content %}
+    <!-- PAGE CONTENT BEGINS -->
+    <div class="alert alert-info">
+        <button class="close" data-dismiss="alert">
+            <i class="ace-icon fa fa-times"></i>
+        </button>
+
+        <i class="ace-icon fa fa-hand-o-right"> 可留空，代表该步骤允许任何用户组执行！</i>
+    </div>
+    <div class="row clearfix">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <form id="addForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                    <h3>{{ wf_type }}：{{ wf_name }}</h3>
+                    <div class="form-group">
+                        <div class="col-lg-4" id="split-left">
+                            <div class="form-group">
+                                <label for="" class="col-sm-4 control-label">流程一</label><br/>
+                                <div class="col-sm-6">
+                                    <select id="group1" name="group1"
+                                                class="form-control m-b" size="2">
+                                        {% for fas in fas_list %}
+                                            {% ifequal fas.step 1 %}
+                                                <option value="{{ fas.group.id }}">{{ fas.group.name }}</option>
+                                            {% endifequal %}
+                                        {% endfor %}
+                                        </select>
+                                </div>
+                                <div class="col-sm-1">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group1', 'group_available')"><i
+                                                class="fa fa-chevron-right"></i></button>
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group_available', 'group1')"><i
+                                                class="fa fa-chevron-left"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="" class="col-sm-4 control-label">流程二</label><br/>
+                                <div class="col-sm-6">
+                                    <select id="group2" name="group2"
+                                                class="form-control m-b" size="2">
+                                        {% for fas in fas_list %}
+                                            {% ifequal fas.step 2 %}
+                                                <option value="{{ fas.group.id }}">{{ fas.group.name }}</option>
+                                            {% endifequal %}
+                                        {% endfor %}
+                                        </select>
+                                </div>
+                                <div class="col-sm-1">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group2', 'group_available')"><i
+                                                class="fa fa-chevron-right"></i></button>
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group_available', 'group2')"><i
+                                                class="fa fa-chevron-left"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="" class="col-sm-4 control-label">流程三</label><br/>
+                                <div class="col-sm-6">
+                                    <select id="group3" name="group3"
+                                            class="form-control m-b" size="2">
+                                        {% for fas in fas_list %}
+                                            {% ifequal fas.step 3 %}
+                                                <option value="{{ fas.group.id }}">{{ fas.group.name }}</option>
+                                            {% endifequal %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-sm-1">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group3', 'group_available')"><i
+                                                class="fa fa-chevron-right"></i></button>
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group_available', 'group3')"><i
+                                                class="fa fa-chevron-left"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="" class="col-sm-4 control-label">流程四</label><br/>
+                                <div class="col-sm-6">
+                                    <select id="group4" name="group4"
+                                            class="form-control m-b" size="2">
+                                        {% for fas in fas_list %}
+                                            {% ifequal fas.step 4 %}
+                                                <option value="{{ fas.group.id }}">{{ fas.group.name }}</option>
+                                            {% endifequal %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-sm-1">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group4', 'group_available')"><i
+                                                class="fa fa-chevron-right"></i></button>
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group_available', 'group4')"><i
+                                                class="fa fa-chevron-left"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="" class="col-sm-4 control-label">流程五</label><br/>
+                                <div class="col-sm-6">
+                                    <select id="group5" name="group5"
+                                            class="form-control m-b" size="2">
+                                        {% for fas in fas_list %}
+                                            {% ifequal fas.step 5 %}
+                                                <option value="{{ fas.group.id }}">{{ fas.group.name }}</option>
+                                            {% endifequal %}
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-sm-1">
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group5', 'group_available')"><i
+                                                class="fa fa-chevron-right"></i></button>
+                                        <button type="button" class="btn btn-white"
+                                                onclick="move('group_available', 'group5')"><i
+                                                class="fa fa-chevron-left"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 animated fadeInRight" id="split-right">
+                            <label for="" class="col-sm-4 control-label">所有用户组</label><br/>
+                            <div class="col-sm-6">
+                                <select id="group_available" name="group_available" class="form-control m-b"
+                                            size="20" multiple>
+                                        {% for group in group_available %}
+                                            <option value="{{ group.id }}">{{ group.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hr-line-dashed"></div>
+                    <div class="form-group">
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                            <button type="button" class="btn btn-primary" onclick="updateFunc()">确认</button>
+                        </div>
+                    </div> <!--button-->
+                </form> <!--form-->
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <script>
+        //初始化数据
+        $(document).ready(function () {
+            //
+        });
+        function updateFunc() {
+            var group_array = ['group1', 'group2', 'group3', 'group4', 'group5'];
+            for(let ga of group_array.values()) {
+                $('#'+ga+' option').each(function () {
+                    $(this).prop('selected', true)
+                });
+                if ($('#'+ga+' option').length > 1) {
+                    toastr.error("每个只允许选择一个用户组！");
+                    return false
+                }
+            }
+            swal({
+                    title: "是否更新？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var data = $('#addForm').serialize();
+                        $.ajax({
+                            url: "{% url 'workflow:wf-steps-detail' %}" + {{ id }},
+                            type: "post",
+                            data: data,
+                            success: function (res) {
+                                if (res.code === 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        console.log(res);
+                                    });
+                                } else {
+                                    swal("操作失败", res.errmsg, "error");
+                                }
+                            },
+                            error: function (res) {
+                                console.log(res);
+                                swal("操作失败", res, "error");
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+        }
+        function move(from, to, from_o, to_o) {
+            console.log(from, to, from_o, to_o);
+            $("#" + from + " option").each(function () {
+                if ($(this).prop("selected") == true) {
+                    if (to === 'group_available') {
+                        $(this).remove();
+                    } else {
+                        $(this).clone().appendTo("#" + to);
+                    }
+                    if( typeof from_o !== 'undefined'){
+                        $("#"+to_o).append($("#"+from_o +" option[value='"+this.value+"']"));
+                    }
+                }
+            });
+        }
+    </script>
+{% endblock %}

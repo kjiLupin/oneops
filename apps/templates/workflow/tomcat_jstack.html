@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'smart-wizard/css/smart_wizard.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_circles.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_arrows.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_dots.min.css' %}" rel="stylesheet">
+    <script src="{% static 'smart-wizard/js/jquery.smartWizard.min.js' %}"></script>
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <link href="{% static 'select2-4.0.5/css/select2.min.css' %}" rel="stylesheet">
+    <script src="{% static 'select2-4.0.5/js/select2.full.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+		<h3>{{ wf_type }}：{{ wf_name }}</h3>
+		<div id="smartwizard">
+            <ul>
+                <li><a href="#step-1">一、<br/>
+                    <small>填写申请单</small>
+                </a></li>
+                <li><a href="#step-2">二、<br/>
+                    <small>自助流程，无需管理员审批</small>
+                </a></li>
+                <li><a href="#step-3">三、<br/>
+                    <small>结束</small>
+                </a></li>
+            </ul>
+            <div>
+                <div id="step-1" class="row col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            Tomcat在线Jstack申请单
+                        </div>
+                        <div class="panel-body">
+                            <div class="col-lg-8">
+                                <form id="createForm" class="form-horizontal  nice-validator n-yellow"
+                                      novalidate="novalidate">
+                                    <div class="form-group">
+                                        <label for="app_id" class="col-sm-2 control-label">应用<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <select id="app_id" name="app_id" data-live-search="true"
+                                                    class="dropdown-menu-left selectpicker ">
+                                                <option value="" selected disabled>选择应用</option>
+                                                {% for app in app_list %}
+                                                    <option value="{{ app.id }}">{{ app.code }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="server" class="col-sm-2 control-label">服务器<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <select id="server" name="server" data-live-search="true"
+                                                    class="dropdown-menu-left selectpicker ">
+                                                <option value="" selected disabled>选择服务器</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-default" data-dismiss="modal">取消
+                                            </button>
+                                            <button type="button" class="btn btn-primary" onclick="jstack()">提交
+                                            </button>
+                                        </div>
+                                    </div> <!--button-->
+                                </form> <!--form-->
+                            </div>
+                            <!-- /.row (nested) -->
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <!-- /.panel -->
+                </div>
+                <div id="step-2" class="col-lg-12">
+                </div>
+                <div id="step-3" class="col-lg-12">
+                </div>
+            </div>
+        </div>
+	</div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+
+        $(document).ready(function () {
+            // https://www.jqueryscript.net/other/Flexible-Bootstrap-Plugin-To-Create-Wizard-Style-Interface-Smart-Wizard.html
+            $('#smartwizard').smartWizard({
+                selected: 0,
+
+                // Allows to cycle the navigation of steps
+                cycleSteps: true,
+
+                // Language variables
+                lang: {
+                    next: 'Next',
+                    previous: 'Previous'
+                },
+
+                // step bar options
+                toolbarSettings: {
+                    toolbarPosition: 'bottom', // none, top, bottom, both
+                    toolbarButtonPosition: 'right', // left, right
+                    showNextButton: false, // show/hide a Next button
+                    showPreviousButton: false, // show/hide a Previous button
+                    toolbarExtraButtons: []
+                },
+
+                // Array of disabled Steps
+                disabledSteps: [],
+
+                // Highlight step with errors
+                errorSteps: [],
+
+                // Hidden steps
+                hiddenSteps: [],
+
+                // theme
+                theme: 'arrows',
+
+                // Effect on navigation, none/slide/fade
+                transitionEffect: 'fade'
+            });
+        });
+        $("#app_id").change(function () {
+            $.ajax({
+                url: "{% url 'cmdb:api-app-detail' version='v1' %}" + $("#app_id option:selected").text(),
+                type: "get",
+                success: function (res) {
+                    if (res.code == 0) {
+                        $('#server').empty();
+                        for(let i = 0; i < res['result']['test'].length; i++) {
+                             $('#server').append("<option value='" +
+                                 res['result']['test'][i]['hn'] + "' >" +
+                                 res['result']['test'][i]['hn']+"（"+res['result']['test'][i]['ip'][0] + "）</option>");
+                        }
+                        for(let i = 0; i < res['result']['pre'].length; i++) {
+                             $('#server').append("<option value='" +
+                                 res['result']['pre'][i]['hn'] + "' >" +
+                                 res['result']['pre'][i]['hn']+"（"+res['result']['pre'][i]['ip'][0] + "）</option>");
+                        }
+                        for(let i = 0; i < res['result']['beta'].length; i++) {
+                            $('#server').append("<option value='" +
+                                res['result']['beta'][i]['hn'] + "' >" +
+                                res['result']['beta'][i]['hn']+"（"+res['result']['beta'][i]['ip'][0] + "）</option>");
+                        }
+                        for(let i = 0; i < res['result']['prod'].length; i++) {
+                            $('#server').append("<option value='" +
+                                res['result']['prod'][i]['hn'] + "' >" +
+                                res['result']['prod'][i]['hn']+"（"+res['result']['prod'][i]['ip'][0] + "）</option>");
+                        }
+                        $('#server').prepend('<option value="" selected disabled>选择服务器</option>');
+                        $('#server').selectpicker('render');
+                        $('#server').selectpicker('refresh');
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        });
+        function jstack() {
+            if (confirm("应用：" + $("#app_id option:selected").text() + " Jstack请求是否提交？")) {
+                $.ajax({
+                    url: "{% url 'workflow:flow-tomcat-jstack' %}",
+                    type: "post",
+                    data: {"app_id": $("#app_id").val(), "hostname": $("#server").val()},
+                    success: function (res) {
+                        if (res.code == 0) {
+                            swal({
+                            title:"success",
+                            text:res.result,
+                            type:"success",
+                            confirmButtonText:'确定'
+                            },function(){
+                                window.location.href = "{% url 'workflow:flow-tomcat-jstack-detail' %}" + res.flow_id;
+                             });
+                        } else {
+                            swal("操作失败", res.errmsg, "error");
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        swal("操作失败", res, "error");
+                    },
+                    beforeSend: function (xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                        }
+                    }
+                });
+            }
+            return false
+        }
+
+    </script>
+{% endblock %}

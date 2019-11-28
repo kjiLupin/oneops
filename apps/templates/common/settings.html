@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'toastr/toastr.min.css' %}" rel="stylesheet" type="text/css"/>
+    <link href="{% static 'bootstrap-switch/css/bootstrap-switch.min.css' %}" rel="stylesheet" type="text/css"/>
+    <script src="{% static 'toastr/toastr.min.js' %}"></script>
+    <script src="{% static 'bootstrap-switch/js/bootstrap-switch.min.js' %}"></script>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_default.html' %}
+{% endblock %}
+{% block content %}
+    <div class="row clearfix">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div id="div-system-config" class="form-group">
+                    <div class="form-horizontal">
+                        <h5 style="color: darkgrey"><b>告警配置</b></h5>
+                        <hr/>
+                        <button id='check_email' class='btn-sm btn-info'>测试EMAIL连接</button>
+                        <div class="form-horizontal">
+                            <div class="form-group">
+                                <label for="mail"
+                                       class="col-sm-2 control-label">MAIL</label>
+                                <div class="col-sm-8">
+                                    <div class="switch switch-small">
+                                        <label>
+                                            <input id="mail" key="mail" value="{{ config.mail }}"
+                                                   type="checkbox"> 是否开启邮件通知
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="div-mail-config" style="display: none">
+                                <div class="form-group">
+                                    <label for="mail_ssl"
+                                           class="col-sm-2 control-label">MAIL_SSL</label>
+                                    <div class="col-sm-8">
+                                        <div class="switch switch-small">
+                                            <label>
+                                                <input id="mail_ssl" key="mail_ssl"
+                                                       value="{{ config.mail_ssl }}"
+                                                       type="checkbox"> 是否使用SSL
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="admin_mail"
+                                           class="col-sm-2 control-label">OneOPS管理员邮箱</label>
+                                    <div class="col-sm-5">
+                                        <input type="text" class="form-control"
+                                               id="admin_mail"
+                                               key="admin_mail"
+                                               value="{{ config.admin_mail }}"
+                                               placeholder="yunwei@example.com">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mail_smtp_server"
+                                           class="col-sm-2 control-label">MAIL_SMTP_SERVER</label>
+                                    <div class="col-sm-5">
+                                        <input type="text" class="form-control"
+                                               id="mail_smtp_server"
+                                               key="mail_smtp_server"
+                                               value="{{ config.mail_smtp_server }}"
+                                               placeholder="邮件smtp地址">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mail_smtp_port"
+                                           class="col-sm-2 control-label">MAIL_SMTP_PORT</label>
+                                    <div class="col-sm-5">
+                                        <input type="text" class="form-control"
+                                               id="mail_smtp_port"
+                                               key="mail_smtp_port"
+                                               value="{{ config.mail_smtp_port }}"
+                                               placeholder="邮件smtp端口">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mail_smtp_user"
+                                           class="col-sm-2 control-label">MAIL_SMTP_USER</label>
+                                    <div class="col-sm-5">
+                                        <input type="text" class="form-control"
+                                               id="mail_smtp_user"
+                                               key="mail_smtp_user"
+                                               value="{{ config.mail_smtp_user }}"
+                                               placeholder="邮箱账号">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="mail_smtp_password"
+                                           class="col-sm-2 control-label">MAIL_SMTP_PASSWORD</label>
+                                    <div class="col-sm-5">
+                                        <input type="password" class="form-control"
+                                               id="mail_smtp_password"
+                                               key="mail_smtp_password"
+                                               value="{{ config.mail_smtp_password }}"
+                                               placeholder="邮箱账号密码">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ding"
+                                       class="col-sm-2 control-label">DING Group</label>
+                                <div class="col-sm-8">
+                                    <div class="switch switch-small">
+                                        <label>
+                                            <input id="ding_to_group" key="ding_to_group" value="{{ config.ding_to_group }}"
+                                                   type="checkbox"> 是否开启钉钉群消息通知
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="div-ding-group-config" style="display: none">
+                                <div class="form-group">
+                                    <label for="ding_web_hook"
+                                           class="col-sm-2 control-label">WEBHOOK</label>
+                                    <div class="col-sm-8">
+                                        <input type="text" class="form-control"
+                                               id="ding_web_hook"
+                                               key="ding_web_hook"
+                                               value="{{ config.ding_web_hook }}"
+                                               placeholder="管理员所在钉钉群WEBHOOK地址！">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ding_to_person"
+                                       class="col-sm-2 control-label">DING</label>
+                                <div class="col-sm-8">
+                                    <div class="switch switch-small">
+                                        <label>
+                                            <input id="ding_to_person" key="ding_to_person"
+                                                   value="{{ config.ding_to_person }}"
+                                                   type="checkbox"> 是否开启钉钉个人消息通知
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="div-ding-person-config" style="display: none">
+
+<i class="ace-icon fa fa-hand-o-right"></i>
+                                创建钉钉微应用参考：<a
+                                    href="https://g.alicdn.com/dingding/opendoc/docs/_isvguide/tab3.html">钉钉企业接入开发文档</a>
+                                <div class="form-group">
+                                    <label for="ding_agent_id"
+                                           class="col-sm-2 control-label">AgentID</label>
+                                    <div class="col-sm-5">
+                                        <input type="text" class="form-control"
+                                               id="ding_agent_id"
+                                               key="ding_agent_id"
+                                               value="{{ config.ding_agent_id }}"
+                                               placeholder="微应用ID">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ding_corp_id"
+                                           class="col-sm-2 control-label">CorpId</label>
+                                    <div class="col-sm-5">
+                                        <input type="text" class="form-control"
+                                               id="ding_corp_id"
+                                               key="ding_corp_id"
+                                               value="{{ config.ding_corp_id }}"
+                                               placeholder="企业在钉钉内的唯一标识">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ding_corp_secret"
+                                           class="col-sm-2 control-label">CorpSecret</label>
+                                    <div class="col-sm-5">
+                                        <input type="password" class="form-control"
+                                               id="ding_corp_secret"
+                                               key="ding_corp_secret"
+                                               value="{{ config.ding_corp_secret }}"
+                                               placeholder="企业的访问密钥">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ding_root_dept_id"
+                                           class="col-sm-2 control-label">授权部门ID</label>
+                                    <div class="col-sm-5">
+                                        <input type="text" class="form-control"
+                                               id="ding_root_dept_id"
+                                               key="ding_root_dept_id"
+                                               value="{{ config.ding_root_dept_id }}"
+                                               placeholder="该应用能访问的根部门ID号">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ding_oneops_username"
+                                           class="col-sm-2 control-label">OneOps2Ding</label>
+                                    <div class="col-sm-5">
+                                        <input type="text" class="form-control"
+                                               id="ding_oneops_username"
+                                               key="ding_oneops_username"
+                                               value="{{ config.ding_oneops_username }}"
+                                               placeholder="OneOps.username对应钉钉里的字段">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr/>
+                    <div class="form-horizontal">
+                        <h5 style="color: darkgrey"><b>Celery配置</b></h5>
+                        <hr/>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Redis</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" key="celery_redis"
+                                       placeholder="127.0.0.1:6379/2" name="celery_redis" id="celery_redis"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Redis密码</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" key="celery_redis_pwd"
+                                       placeholder="Redis密码未设置则留空" name="celery_redis_pwd" id="celery_redis_pwd"/>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="reset" class="btn btn-default pull-left"><i class="fa fa-undo"></i> 重置
+                            </button>
+                            <button id="saveBtn" type="button" class="btn btn-success pull-left"><i
+                                    class="fa fa-check"></i> 保存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        $('input[type="checkbox"]').each(function () {
+            if ($(this).val() === 'true') {
+                $(this).bootstrapSwitch({
+                    onColor: "success",
+                    offColor: "danger",
+                    size: "small",
+                    onSwitchChange: function (event, state) {
+                        if (state === true) {
+                            $(this).val(true);
+                            if ($(this).attr("id") === 'mail') {
+                                $("#div-mail-config").show();
+                            } else if ($(this).attr("id") === 'ding_to_group') {
+                                $("#div-ding-group-config").show();
+                            } else if ($(this).attr("id") === 'ding_to_person') {
+                                $("#div-ding-person-config").show();
+                            }
+                        } else {
+                            $(this).val(false);
+                            if ($(this).attr("id") === 'mail') {
+                                $("#mail_ssl").val(false);
+                                $("#div-mail-config").hide();
+                            } else if ($(this).attr("id") === 'ding_to_group') {
+                                $("#div-ding-group-config").hide();
+                            } else if ($(this).attr("id") === 'ding_to_person') {
+                                $("#div-ding-person-config").hide();
+                            }
+                        }
+                    }
+                }).bootstrapSwitch('state', true);
+            }
+            else {
+                $(this).bootstrapSwitch({
+                    onColor: "success",
+                    offColor: "danger",
+                    size: "small",
+                    onSwitchChange: function (event, state) {
+                        if (state === true) {
+                            $(this).val(true);
+                            if ($(this).attr("id") === 'mail') {
+                                $("#div-mail-config").show();
+                            } else if ($(this).attr("id") === 'ding_to_group') {
+                                $("#div-ding-group-config").show();
+                            } else if ($(this).attr("id") === 'ding_to_person') {
+                                $("#div-ding-person-config").show();
+                            }
+                        } else {
+                            $(this).val(false);
+                            if ($(this).attr("id") === 'mail') {
+                                $("#mail_ssl").val(false);
+                                $("#div-mail-config").hide();
+                            } else if ($(this).attr("id") === 'ding_to_group') {
+                                $("#div-ding-group-config").hide();
+                            } else if ($(this).attr("id") === 'ding_to_person') {
+                                $("#div-ding-person-config").hide();
+                            }
+                        }
+                    }
+                }).bootstrapSwitch('state', false);
+            }
+        });
+
+        $("#saveBtn").click(function () {
+            var sys_config = $("#div-system-config");
+            var configs = [];
+            sys_config.find('[key]').each(
+                function () {
+                    var config_item = $(this).attr("key");
+                    var config_value = $(this).val();
+                    configs.push({
+                        key: config_item,
+                        value: config_value
+                    });
+                }
+            );
+
+            $.ajax({
+                type: "post",
+                url: "{% url 'common:settings' %}",
+                dataType: "json",
+                data: {
+                    configs: JSON.stringify(configs)
+                },
+                complete: function () {
+                },
+                success: function (data) {
+                    if (data.code === 0) {
+                        toastr.success(data.result);
+                    } else {
+                        alert("status: " + data.code + "\nmsg: " + data.errmsg);
+                    }
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert(errorThrown);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        });
+        $("#check_email").click(function () {
+            $(this).addClass('disabled');
+            $(this).prop('disabled', true);
+            $.ajax({
+                type: "get",
+                url: "/email/check/",
+                dataType: "json",
+                complete: function () {
+                    $("#check_email").removeClass('disabled');
+                    $("#check_email").prop('disabled', false);
+                },
+                success: function (data) {
+                    if (data.status === 0) {
+                        alert(data.msg)
+                    } else {
+                        alert("status: " + data.status + "\nmsg: " + data.msg);
+                    }
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert(errorThrown);
+                }
+            });
+        });
+    </script>
+{% endblock %}

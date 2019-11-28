@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% load workflow %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'smart-wizard/css/smart_wizard.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_circles.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_arrows.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_dots.min.css' %}" rel="stylesheet">
+    <link href="{% static 'bootstrap-multiselect/css/bootstrap-multiselect.css' %}" rel="stylesheet">
+    <script src="{% static 'smart-wizard/js/jquery.smartWizard.min.js' %}"></script>
+    <script src="{% static 'layer-v3.1.1/layer.js' %}"></script>
+    <script src="{% static 'ace/ace.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+		<h3>{{ wf_type }}：{{ wf_name }}</h3>
+		<div id="smartwizard">
+            <ul>
+                <li><a href="#step-1">一、<br/>
+                    <small>开发填写申请单</small>
+                </a></li>
+                <li><a href="#step-2">二、<br/>
+                    <small>运维审核</small>
+                </a></li>
+                <li><a href="#step-3">三、<br/>
+                    <small>结束</small>
+                </a></li>
+            </ul>
+            <div>
+                <div id="step-1" class="col-lg-12">
+                </div>
+                <div id="step-2" class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            流程详细
+                        </div>
+                        <div class="panel-body">
+                            <pre>{{ content }}</pre>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        {% if current_step != 2 %}
+                            <!-- current_step 大于 2，则显示已预分配服务器信息 -->
+                            <div class="panel-heading">
+                                显示结果
+                            </div>
+                            <div class="panel-body">
+                                {% for fsl in fsl_list %}
+                                    {% ifequal fsl.flow_step.step 2 %}
+                                        <pre>{{ fsl.reply }}</pre>
+                                    {% endifequal %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="panel-heading">
+                                Tomcat 在线Dump操作
+                            </div>
+                            <div class="panel-body">
+                                <p>注意：Tomcat 在线Dump操作会导致服务不可用！请谨慎执行！</p>
+                                <div class="modal-footer">
+                                    {% if request.user|chk_flow_perm:"tomcat_dump:2" %}
+                                        <button type="button" class="btn btn-danger" onclick="stopFunc()">终止流程
+                                        </button>
+                                        <button type="button" class="btn btn-default" data-dismiss="modal">取消
+                                        </button>
+                                        <button type="button" class="btn btn-primary" onclick="doFunc()">立即执行
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div id="step-3" class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            流程详细
+                        </div>
+                        <div class="panel-body">
+                            <pre>{{ content }}</pre>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            显示结果
+                        </div>
+                        <div class="panel-body">
+                            {% for fsl in fsl_list %}
+                                {% ifequal fsl.flow_step.step 3 %}
+                                    <pre>{{ fsl.reply }}</pre>
+                                {% endifequal %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+
+    <div class="modal fade" id="execResultModal">
+        <div class="modal-dialog" style="width:80%">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">执行结果</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="box-footer">
+                        <pre id="execResult" style="background-color: #cccccc"></pre>
+                    </div>
+                </div> <!--modal-body-->
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        //初始化数据
+        $(document).ready(function () {
+            var status = "{{ status }}";
+            var current_step = {{ current_step }};
+            var disable_steps = [0, 1, 2, 3, 4, 5];
+            disable_steps.splice(1, current_step - 1);
+            $('#smartwizard').smartWizard({
+                selected: current_step - 1,
+                lang: {
+                    next: '下一步',
+                    previous: '上一步'
+                },
+                toolbarSettings: {
+                    toolbarPosition: 'bottom',      // none, top, bottom, both
+                    toolbarButtonPosition: 'right', // left, right
+                    showNextButton: true,           // show/hide a Next button
+                    showPreviousButton: true,       // show/hide a Previous button
+                    toolbarExtraButtons: []
+                },
+                disabledSteps: disable_steps,
+                theme: 'arrows',
+                transitionEffect: 'fade'
+            });
+        });
+        function stopFunc() {
+            if (confirm("确认终止应用下线流程？")) {
+                $.ajax({
+                    url: "{% url 'workflow:flow-tomcat-dump-detail' %}" + {{ flow_id }},
+                    type: "post",
+                    data: {
+                        "action": "stop",
+                        "current_step": {{ current_step }}
+                    },
+                    success: function (res) {
+                        if (res.code == 0) {
+                            swal({
+                                title: "success",
+                                text: res.result,
+                                type: "success",
+                                confirmButtonText: '确定'
+                            }, function () {
+                                window.location.href = "{% url 'workflow:flow-tomcat-dump-detail' %}" + {{ flow_id }};
+                            });
+                        } else {
+                            swal("操作失败", res.errmsg, "error");
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        swal("操作失败", res, "error");
+                    },
+                    beforeSend: function (xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                        }
+                    }
+                });
+            }
+        }
+        function doFunc() {
+            if (confirm("是否立即执行在线Dump操作？该操作会影响Tomcat运行！") === false) {
+                return false;
+            }
+            $.ajax({
+                url: "{% url 'workflow:flow-tomcat-dump-detail' %}" + {{ flow_id }},
+                type: "post",
+                data: {
+                        "current_step": {{ current_step }}
+                },
+                success: function (res) {
+                    if (res.code == 0) {
+                        swal({
+                            title: "success",
+                            text: res.result,
+                            type: "success",
+                            confirmButtonText: '确定'
+                        }, function () {
+                            window.location.href = "{% url 'workflow:flow-tomcat-dump-detail' %}" + {{ flow_id }};
+                        });
+                    } else {
+                        swal("操作失败", res.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+            return false;
+        }
+    </script>
+{% endblock %}

@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'smart-wizard/css/smart_wizard.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_circles.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_arrows.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_dots.min.css' %}" rel="stylesheet">
+    <script src="{% static 'smart-wizard/js/jquery.smartWizard.min.js' %}"></script>
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <link href="{% static 'select2-4.0.5/css/select2.min.css' %}" rel="stylesheet">
+    <script src="{% static 'select2-4.0.5/js/select2.full.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+		<h3>{{ wf_type }}：{{ wf_name }}</h3>
+		<div id="smartwizard">
+            <ul>
+                <li><a href="#step-1">一、<br/>
+                    <small>开发填写申请单</small>
+                </a></li>
+                <li><a href="#step-2">二、<br/>
+                    <small>下线Dubbo/Nginx</small>
+                </a></li>
+                <li><a href="#step-3">三、<br/>
+                    <small>禁用Zabbix监控</small>
+                </a></li>
+                <li><a href="#step-4">四、<br/>
+                    <small>停止应用进程，备份应用代码</small>
+                </a></li>
+                <li><a href="#step-5">五、<br/>
+                    <small>结束</small>
+                </a></li>
+            </ul>
+            <div>
+                <div id="step-1" class="row col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            旧应用下线申请单
+                        </div>
+                        <div class="panel-body">
+                            <div class="col-lg-8">
+                                <form id="createForm" class="form-horizontal  nice-validator n-yellow"
+                                      novalidate="novalidate">
+                                    <div class="form-group">
+                                        <label for="app_id" class="col-sm-2 control-label">应用<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <select id="app_id" name="app_id" data-live-search="true"
+                                                    class="dropdown-menu-left selectpicker ">
+                                                <option value="" selected disabled>选择需要下线的应用</option>
+                                                {% for app in app_list %}
+                                                    <option value="{{ app.id }}">{{ app.code }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="host" class="col-sm-2 control-label">名称<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <input id="app_name" name="app_name" readonly
+                                                   class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="type" class="col-sm-2 control-label">类型<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-2">
+                                            <input id="app_type" name="app_type" readonly
+                                                    class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="host" class="col-sm-2 control-label">Git/SVN地址<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <input id="scm_url" name="scm_url" placeholder="git@git.example.com:xxx/yyy.git"
+                                                   readonly
+                                                   class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="host" class="col-sm-2 control-label">生产域名</label>
+                                        <div class="col-sm-8">
+                                            <input id="domain_name" name="domain_name" readonly
+                                                   class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="pri" class="col-sm-2 control-label">重要性<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-2">
+                                            <input id="importance" name="importance" readonly
+                                                    class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="data" class="col-sm-2 control-label">Tomcat端口<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-2">
+                                            <input id="tomcat_port" name="tomcat_port" readonly
+                                                   class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="data" class="col-sm-2 control-label">开发部门<span
+                                                class="red-fonts">*</span></label>
+                                        <div class="col-sm-8">
+                                            <input id="biz_mgt_dept" name="biz_mgt_dept" readonly
+                                                   class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="ttl" class="col-sm-2 control-label">描述</label>
+                                        <div class="col-sm-8">
+                                            <input id="comment" name="comment" readonly
+                                                   class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="ttl" class="col-sm-2 control-label">第一负责人</label>
+                                        <div class="col-sm-8">
+                                            <input id="primary" name="primary" readonly
+                                                    class="form-control">
+                                            </input>
+                                        </div>
+                                    </div>
+
+                                    <div class="hr-line-dashed"></div>
+                                    <div class="form-group">
+                                        <label for="ttl" class="col-sm-2 control-label">第二负责人</label>
+                                        <div class="col-sm-8">
+                                            <input id="secondary" name="secondary" readonly
+                                                    class="form-control">
+                                            </input>
+                                        </div>
+                                    </div>
+
+                                    <!--Status-->
+                                    <div class="form-group">
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-default" data-dismiss="modal">取消
+                                            </button>
+                                            <button type="button" class="btn btn-primary" onclick="appOffline()">提交
+                                            </button>
+                                        </div>
+                                    </div> <!--button-->
+                                </form> <!--form-->
+                            </div>
+                            <!-- /.row (nested) -->
+                        </div>
+                        <!-- /.panel-body -->
+                    </div>
+                    <!-- /.panel -->
+                </div>
+                <div id="step-2" class="col-lg-12">
+                </div>
+                <div id="step-3" class="col-lg-12">
+                </div>
+                <div id="step-4" class="col-lg-12">
+                </div>
+                <div id="step-5" class="col-lg-12">
+                </div>
+            </div>
+        </div>
+	</div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+
+        $(document).ready(function () {
+            // https://www.jqueryscript.net/other/Flexible-Bootstrap-Plugin-To-Create-Wizard-Style-Interface-Smart-Wizard.html
+            $('#smartwizard').smartWizard({
+                selected: 0,
+
+                // Allows to cycle the navigation of steps
+                cycleSteps: true,
+
+                // Language variables
+                lang: {
+                    next: 'Next',
+                    previous: 'Previous'
+                },
+
+                // step bar options
+                toolbarSettings: {
+                    toolbarPosition: 'bottom', // none, top, bottom, both
+                    toolbarButtonPosition: 'right', // left, right
+                    showNextButton: false, // show/hide a Next button
+                    showPreviousButton: false, // show/hide a Previous button
+                    toolbarExtraButtons: []
+                },
+
+                // Array of disabled Steps
+                disabledSteps: [],
+
+                // Highlight step with errors
+                errorSteps: [],
+
+                // Hidden steps
+                hiddenSteps: [],
+
+                // theme
+                theme: 'arrows',
+
+                // Effect on navigation, none/slide/fade
+                transitionEffect: 'fade'
+            });
+        });
+        $("#app_id").change(function () {
+            $.ajax({
+                url: "{% url 'cmdb:app-detail' %}" + $("#app_id").val(),
+                type: "get",
+                success: function (data) {
+                    if (data.code == 0) {
+                        var data = data['result'];
+                        reShowForm(data, 'createForm');
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        });
+        function appOffline() {
+            if (confirm("应用：" + $("#app_id option:selected").text() + " 下线请求是否提交？")) {
+                console.log($("#app_id").val());
+                $.ajax({
+                    url: "{% url 'workflow:flow-app-offline' %}",
+                    type: "post",
+                    data: {"app_id": $("#app_id").val()},
+                    success: function (res) {
+                        if (res.code == 0) {
+                            swal({
+                            title:"success",
+                            text:res.result,
+                            type:"success",
+                            confirmButtonText:'确定'
+                            },function(){
+                                window.location.href = "{% url 'workflow:flow-app-offline-detail' %}" + res.flow_id;
+                             });
+                        } else {
+                            swal("操作失败", res.errmsg, "error");
+                        }
+                    },
+                    error: function (res) {
+                        console.log(res);
+                        swal("操作失败", res, "error");
+                    },
+                    beforeSend: function (xhr, settings) {
+                        if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                            xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                        }
+                    }
+                });
+            }
+            return false
+        }
+
+    </script>
+{% endblock %}

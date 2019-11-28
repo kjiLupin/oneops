@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/zTree_v3/css/awesomeStyle/awesome.css" type="text/css">
+    <script src="{% static 'ace/ace.js' %}"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.core.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.excheck.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exedit.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exhide.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/fuzzysearch.js"></script>
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <style type="text/css">
+        .dropdown a:hover {
+            background-color: #f1f1f1
+        }
+    </style>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_job.html' %}
+{% endblock %}
+{% block content %}
+    <div class="wrapper wrapper-content">
+        <div class="row">
+            <div class="col-lg-12" id="split-left" style="padding-left: 3px">
+                <div class="ibox float-e-margins">
+                    搜索：<input type="text" id="key" value="" class="empty"/>
+                </div>
+                <div class="ibox float-e-margins">
+                    <div class="ibox-content mailbox-content" style="padding-top: 10px;padding-left: 1px">
+                        <div class="file-manager ">
+                            <div id="assetTree" class="ztree">
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--显示文件内容-->
+    <div class="modal fade" id="showModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">文件</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="column">
+                        <pre id="editor" class="ace_editor" style="min-height:350px;"></pre>
+                    </div>
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        var zTree, show = 0;
+
+        function beforeClick(treeId, treeNode, clickFlag) {
+            if (treeNode.name.match(RegExp(/\/$/))) {return false}
+        }
+        function onClick(event, treeId, treeNode) {
+            // console.log(event, treeId, treeNode.id);
+            $.ajax({
+                url: "{% url 'job:galaxy-roles-file-detail' file='V1' %}".replace('/V1', treeNode.id),
+                type: "get",
+                success: function (res) {
+                    if (res.code == 0) {
+                        var editor = ace.edit('editor');
+                        editor.setValue(res.result);
+                        editor.setReadOnly(true);
+                        $('#showModal').modal('show');
+                    } else {
+                        toastr.error(res.errmsg);
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    toastr.error(res);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        }
+        function selectQueryNode() {
+            var query_node_id = getUrlParam("node");
+            var cookie_node_id = getCookie('node_selected');
+            var node;
+            var node_id;
+
+            if (query_node_id !== null) {
+                node_id = query_node_id
+            } else if (cookie_node_id !== null) {
+                node_id = cookie_node_id;
+            }
+
+            node = zTree.getNodesByParam("id", node_id, null);
+            if (node) {
+                zTree.selectNode(node[0]);
+            }
+        }
+
+        function initTree() {
+            var setting = {
+                view: {
+                    dblClickExpand: false,
+                    showLine: true
+                },
+                data: {
+                    simpleData: {
+                        enable: true
+                    }
+                },
+                callback: {
+                    onClick: onClick,
+                    beforeClick: beforeClick
+                }
+            };
+
+            var zNodes = [];
+            $.get("{% url 'job:galaxy-list' %}", function (data) {
+                if (data.length === 0) {
+                    zNodes.push({"id": 0, "name": "/", "pId": -1, "open": open});
+                } else {
+                    $.each(data, function (index, v) {
+                        zNodes.push({"id": v["id"], "name": v["name"], "pId": v["parent_id"], "open": false});
+                    });
+                }
+                $.fn.zTree.init($("#assetTree"), setting, zNodes);
+                fuzzySearch('assetTree','#key',null,false);     //initialize fuzzysearch function
+                zTree = $.fn.zTree.getZTreeObj("assetTree");
+                selectQueryNode();
+            });
+        }
+
+        $(document).ready(function () {
+            initTree();
+        });
+    </script>
+{% endblock %}

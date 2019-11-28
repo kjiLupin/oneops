@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="{% static 'ace/ace.js' %}"></script>
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_job.html' %}
+{% endblock %}
+{% block content %}
+    <style>
+        .width100{
+            width: 100% !important;
+        }
+    </style>
+    <div class="row clearfix">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div id="div-system-config" class="form-group">
+                    <form id="executeForm" class="form-horizontal" enctype="multipart/form-data" method="post">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">任务名称</label>
+                            <div class="col-sm-6">
+                                <input class="form-control" type="text" item="task_name"
+                                       placeholder="磁盘检测脚本分发" name="task_name" id="task_name"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">账户<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <select id="host_user" name="host_user" class="selectpicker width100" data-live-search="true">
+                                    {% for user in host_users %}
+                                        <option value="{{ user.id }}">{{ user.name }}({{ user.desc }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <a href="/admin/ssh/hostuser/" type="button" class="btn btn-success pull-left"><i class="fa fa-plus"></i>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">程序</label>
+                            <div class="col-sm-8">
+                                <div class="radio i-checks">
+                                    <label> <input type="radio" value="ansible" name="program" checked
+                                                   onclick="pTypeShow(this)">Ansible</label>
+                                    <label> <input type="radio" value="paramiko" name="program" disabled
+                                                   onclick="pTypeShow(this)">Paramiko</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div name="e_ansible" id="e_ansible" style="display:block;">
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Inventory<span class="red-fonts">*</span></label>
+                                <div class="col-sm-4">
+                                    <select id="inventory" name="inventory" class="selectpicker width100" data-live-search="true">
+                                    </select>
+                                </div>
+                                <div class="col-sm-3">
+                                    <button type="button" class="btn btn-primary" data-toggle="collapse"
+                                            data-target="#collapseOne">
+                                        查看内容
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div id="collapseOne" class="collapse in">
+                                    <div class="modal-body col-sm-offset-1 ">
+                                        <div class="column">
+                                            <pre id="inventory_editor" class="ace_editor"
+                                                 style="min-height:350px;width:80%"></pre>
+                                        </div>
+                                    </div> <!--modal-body-->
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">目标主机（组）<span class="red-fonts">*</span></label>
+                                <div class="col-sm-6">
+                                    <input class="form-control" type="text" name="host" id="host"
+                                           placeholder="请输入该Inventory文件中的主机名或组名，多个使用逗号分隔"/>
+                                </div>
+                            </div>
+                        </div>
+                        <hr/>
+                        <div>
+                            <input type="hidden" name="execute" value="ad-hoc" class="form-control">
+                            <input type="hidden" name="module" value="copy" class="form-control">
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">参数</label>
+                                <div class="col-sm-7">
+                                    <input type="text" id="upload_args" name="upload_args" class="form-control"
+                                           value="dest=/tmp/ backup=yes owner=root group=root mode=0644">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">本地文件</label>
+                                <div class="col-sm-5">
+                                    <input id="upload_file" name="upload_file" type="file" multiple>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- paramiko -->
+                        <div class="form-group">
+                            <div name="e_paramiko" id="e_paramiko" style="display:none;">
+                                <div class="form-group">
+                                    <label class="col-sm-5 col-sm-offset-1 control-label"><span class="red-fonts">*</span></label>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="form-horizontal">
+                        <div class="modal-footer">
+                            <button type="reset" class="btn btn-default pull-left"><i class="fa fa-undo"></i> 重置
+                            </button>
+                            <button id="executeBtn" type="button" class="btn btn-success pull-left"><i
+                                    class="fa fa-check"></i> 提交
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}
+{% block custom_foot_css_js %}
+
+    <script>
+        function pTypeShow(o) {
+            if (o.value == "paramiko") {
+                document.getElementById("e_ansible").style.display = "none";
+                document.getElementById("e_paramiko").style.display = "block";
+            }
+            else {
+                document.getElementById("e_ansible").style.display = "block";
+                document.getElementById("e_paramiko").style.display = "none";
+            }
+        }
+        function getInventoryFile() {
+            $.ajax({
+                async: false,
+                type: "get",
+                url: "{% url 'job:api-inventory' version='v1' %}",
+                dataType: "json",
+                complete: function () {
+                },
+                success: function (data) {
+                    $('#inventory option').remove();
+                    $.each(data, function (index, v) {
+                        if (index === 0) {
+                            var _html = "<option value='" + v["path"] + "' selected=\"selected\">" + v["name"] + "</option>";
+                        } else {
+                            var _html = "<option value='" + v["path"] + "' >" + v["name"] + "</option>";
+                        }
+                        $('#inventory').append(_html);
+                    });
+                    $('#inventory').selectpicker('render');
+                    $('#inventory').selectpicker('refresh');
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert(errorThrown);
+                }
+            });
+        }
+        function getInventoryFileCont() {
+            var file_path = $('#inventory').val();
+            $.ajax({
+                url: "{% url 'job:inventory-file' file='V1' %}".replace('/V1', file_path),
+                type: "get",
+                success: function (res) {
+                    if (res.code == 0) {
+                        $('#collapseOne').collapse('hide');
+                        var editor = ace.edit('inventory_editor');
+                        editor.setValue(res.result);
+                        editor.setReadOnly(true);
+                    } else {
+                        toastr.error(res.errmsg);
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    toastr.error(res);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        }
+        $(document).ready(function () {
+            getInventoryFile();
+            getInventoryFileCont();
+        });
+
+        $("#inventory").change(function () {
+            getInventoryFileCont()
+        });
+
+        $("#executeBtn").unbind("click").click(function(){
+            $("#executeBtn").attr("disabled", true);
+            // var data = $('#executeForm').serialize();
+            // console.log(data);
+            var formData = new FormData($('#executeForm')[0]);
+            $.ajax({
+                url: "{% url 'job:file-upload' %}",
+                type: "post",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function (res) {
+                    if (res.code == 0) {
+                        toastr.success(res.result);
+                    } else {
+                        toastr.error(res.errmsg);
+                    }
+                },
+                complete: function () {
+                    $('#upload_file').empty();
+                    $("#executeBtn").attr("disabled", false);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

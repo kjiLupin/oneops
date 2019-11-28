@@ -1,0 +1,76 @@
+# base
+django==2.1.0
+django_auth_ldap==1.7.0
+django-rest-framework==0.1.0
+requests==2.18.4
+simplejson==3.14.0
+pymysql==0.9.2
+Crypto==1.4.1
+pycrypto==2.6.1
+xlrd==1.1.0
+openpyxl==2.5.12
+pyecharts==0.5.5
+
+# cmdb
+IPy==0.83
+python-jenkins==1.4.0
+python-gitlab==1.6.0
+
+# workflow
+aliyun-python-sdk-core==2.13.4
+aliyun-python-sdk-cdn==3.0.8
+oss2==2.6.1
+azure-storage==0.36.0
+
+# job
+paramiko==2.4.2
+ansible==2.7.1
+redis==2.10.6
+celery==4.2.1
+django-celery-beat==1.1.1
+django-celery-results==1.0.4
+daphne==2.1.2
+channels==2.1.1
+channels-redis==2.2.1
+
+# manage
+gunicorn==19.7.1
+
+# 修改 django-celery-beat 源码
+# https://github.com/celery/django-celery-beat/issues/80
+# https://www.jianshu.com/p/c1dee7d3cbb9
+# https://www.cnblogs.com/huchong/p/7895446.html
+# https://github.com/celery/django-celery-beat
+#
+# site-packages/django_celery_beat/utils.py
+# def make_aware(value):
+#     """Force datatime to have timezone information."""
+#     if getattr(settings, 'USE_TZ', False):
+#         # naive datetimes are assumed to be in UTC.
+#         if timezone.is_naive(value):
+#             value = timezone.make_aware(value, timezone.utc)
+#         # then convert to the Django configured timezone.
+#         default_tz = timezone.get_default_timezone()
+#         value = timezone.localtime(value, default_tz)
+#     # Active time are assumed to Naive time.
+#     if not getattr(settings, 'CELERY_ENABLE_UTC', True):
+#         if timezone.is_naive(value):
+#             value = value
+#         else:
+#             value = timezone.make_naive(value)
+#
+#     return value
+
+# site-packages/django_celery_beat/schedulers.py
+# def _default_now(self):
+#     now = self.app.now()
+#     # The PyTZ datetime must be localised for the Django-Celery-Beat
+#     # scheduler to work. Keep in mind that timezone arithmatic
+#     # with a localized timezone may be inaccurate.
+#     from django.utils import timezone
+#     if timezone.is_aware(now):
+#         return now.tzinfo.localize(now.replace(tzinfo=None))
+#     else:
+#         return now
+
+

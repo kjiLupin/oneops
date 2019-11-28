@@ -1,0 +1,17 @@
+- hosts: "{{apphost}}"
+  tasks:
+  - name: get pid
+    raw: lsof -i:{{app_port}} |tail -n1 |awk '{print $2}'
+    register: pid
+    ignore_errors: True
+  - name: exec jmap
+    shell: /usr/local/jdk1.8/bin/jmap -dump:format=b,file=/data/logs/apps/{{app_port}}-{{app_name}}/dump/dump.hprof {{pid.stdout}}
+    ignore_errors: True
+  - name: wait for
+    wait_for:
+      path: /data/logs/apps/{{app_port}}-{{app_name}}/dump/dump.hprof
+      timeout: 600
+  - name: download dump file
+    fetch: src=/data/logs/apps/{{app_port}}-{{app_name}}/dump/dump.hprof dest=/data/dump/{{app_port}}.hprof flat=yes
+    ignore_errors: True
+  serial: "60%"

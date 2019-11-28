@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <script type="text/javascript" src="{% static 'ace/ace.js' %}"></script>
+    <style>
+        .width100{
+            width: 100% !important;
+        }
+    </style>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_job.html' %}
+{% endblock %}
+{% block content %}
+    <div class="row clearfix">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div id="div-system-config" class="form-group">
+                    <form id="executeForm" class="form-horizontal" enctype="multipart/form-data" method="post">
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">作业名<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <select id="job" name="job" class="selectpicker width100"
+                                        data-live-search="true">
+                                </select>
+                            </div>
+                            <div class="col-sm-3">
+                                <button type="button" class="btn btn-primary" data-toggle="collapse"
+                                        data-target="#collapseOne">
+                                    查看作业详细
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div id="collapseOne" class="collapse in">
+                                <div class="modal-body col-sm-offset-1 ">
+                                    <div class="column">
+                                            <pre id="job_editor" class="ace_editor" style="min-height:200px;width:80%">
+                                            </pre>
+                                    </div>
+                                </div> <!--modal-body-->
+                            </div>
+                        </div>
+                    </form>
+                    <div class="form-horizontal" style="margin: 0 20% 0 10%;">
+                        <div class="modal-footer">
+                            <button type="reset" class="btn btn-default pull-left"><i class="fa fa-undo"></i> 重置
+                            </button>
+                            <button id="executeBtn" type="button" class="btn btn-success pull-left"><i
+                                    class="fa fa-check"></i> 立即执行
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="execResultModal">
+        <div class="modal-dialog" style="width:80%">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">执行结果</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="box-footer">
+                        <pre id="execResult" style="background-color: #cccccc"></pre>
+                    </div>
+                </div> <!--modal-body-->
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+{% endblock content %}
+{% block custom_foot_css_js %}
+
+    <script>
+        function getJobList() {
+            $.ajax({
+                async: false,
+                type: "get",
+                url: "{% url 'job:api-job-list' version='v1' %}",
+                dataType: "json",
+                complete: function () {
+                },
+                success: function (data) {
+                    $('#job option').remove();
+                    $.each(data, function (index, v) {
+                        if (index === 0) {
+                            var _html = "<option value='" + v["id"] + "' selected=\"selected\">" + v["name"] + "(" + v["desc"] + ")</option>";
+                        } else {
+                            var _html = "<option value='" + v["id"] + "' >" + v["name"] + "(" + v["desc"] + ")</option>";
+                        }
+                        $('#job').append(_html);
+                    });
+                    $('#job').selectpicker('render');
+                    $('#job').selectpicker('refresh');
+                },
+                error: function (XMLHttpRequest, textStatus, errorThrown) {
+                    alert(errorThrown);
+                }
+            });
+        }
+        function getJobDetail() {
+            var job = $('#job').val();
+            $.ajax({
+                url: "{% url 'job:api-job-detail' version='v1' %}" + job,
+                type: "get",
+                success: function (res) {
+                    if (res.code == 0) {
+                        var editor = ace.edit('job_editor');
+                        editor.setValue(res.result);
+                        editor.setReadOnly(true);
+                    } else {
+                        toastr.error(res.errmsg);
+                    }
+                    $('#collapseOne').collapse('hide');
+                },
+                error: function (res) {
+                    console.log(res);
+                    toastr.error(res);
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+        }
+
+        $(document).ready(function () {
+            getJobList();
+            getJobDetail();
+        });
+
+        $("#job").change(function () {
+            getJobDetail()
+        });
+
+        $("#executeBtn").unbind("click").click(function(){
+            if (confirm("是否立即执行？")) {
+                var data = {"job_id": $('#job').val()};
+                let ws_scheme = window.location.protocol === "https:" ? "wss" : "ws";
+                let socket = new WebSocket(ws_scheme + '://' + window.location.host + "/ws/ansible/job/");
+                $('#execResultModal').modal('show');
+
+                socket.onopen = function () {
+                    $("#execResult").html('开始执行....\n');
+                    socket.send(JSON.stringify(data));
+                };
+
+                socket.onmessage = function (e) {
+                    $("#execResult").append(e.data)
+                };
+
+                socket.onclose = function () {
+                    $("#execResult").append('\n<code>执行完毕....</code>')
+                }
+            }
+        });
+    </script>
+{% endblock %}

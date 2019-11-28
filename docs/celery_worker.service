@@ -1,0 +1,15 @@
+[Unit]
+Description=WD OneOps Project Celery Worker
+After=celery_worker.service
+
+[Service]
+Type=forking
+User=root
+Group=root
+ExecStart=/opt/wdoneops/apps/startup.sh celery_worker
+ExecReload=
+ExecStop=/opt/wdoneops/apps/shutdown.sh celery_worker
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

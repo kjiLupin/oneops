@@ -1,0 +1,23 @@
+---
+- hosts: "{{apphost}}"
+  tasks:
+  - name: stop app process
+    shell: ps -aux | grep -v grep | grep -w "{{appname}}" | awk '{print $2}'| xargs kill -9
+    ignore_errors: yes
+  - name: judge app dir is exits
+    shell: ls /data/{{appport}}-{{appname}}
+    ignore_errors: True
+    register: result
+  - name: result judge
+    shell: echo "dir exits"
+    when: result|succeeded
+    notify:
+     rename app dir
+  - name: judge agent process is exits
+    shell: ps -aux | grep -v grep | grep -w "{{appname}}"
+    ignore_errors: True
+    register: result
+
+  handlers:
+  - name: rename app dir
+    shell: mv /data/{{appport}}-{{appname}} /data/{{appname}}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+{% endblock %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_job.html' %}
+{% endblock %}
+{% block content %}
+    <div class="row clearfix">
+        <div class="panel panel-default">
+            <div class="panel-body">
+                <div id="div-system-config" class="form-group">
+                    <p>ansible使用copy模块进行文件分发，我已经整合在 "命令执行" 中。</p>
+                    <p>点击 "作业执行" -》 "命令执行"，"Ansible模块" 选择 "copy"即可。</p>
+                    <p>暂时使用以上方法，以后新增 Paramiko + celery执行方式，再开发本页面。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        $(document).ready(function () {
+            console.log("待开发！")
+        });
+    </script>
+{% endblock %}

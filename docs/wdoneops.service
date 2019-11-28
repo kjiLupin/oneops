@@ -1,0 +1,16 @@
+[Unit]
+Description=WD OneOps project
+After=wdoneops.service
+
+[Service]
+Type=forking
+User=root
+Group=root
+ExecStart=/opt/wdoneops/apps/startup.sh wdoneops
+ExecReload=
+ExecStop=/opt/wdoneops/apps/shutdown.sh wdoneops
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,23 @@
+<nav class="navbar-default sidebar" style="margin-top:0px;" role="navigation">
+    <div class="sidebar-nav navbar-collapse">
+        <ul class="nav" id="side-menu">
+            {% if perms.auth.perm_dns_charts %}
+                <li>
+                    <a href="{% url 'dns:charts' %}"><i class="fa fa-bar-chart-o fa-fw"></i> Charts</a>
+                </li>
+            {% endif %}
+            {% if perms.auth.perm_dns_zone_view %}
+                <li>
+                    <a href="{% url 'dns:zone' %}"><i class="fa fa-globe fa-fw"></i> 域名配置</a>
+                </li>
+            {% endif %}
+            {% if perms.auth.perm_dns_log_view %}
+                <li>
+                    <a href="{% url 'dns:dns-log' %}"><i class="fa fa-save fa-fw"></i> 操作日志</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+    <!-- /.sidebar-collapse -->
+</nav>
+<!-- /.navbar-static-side -->

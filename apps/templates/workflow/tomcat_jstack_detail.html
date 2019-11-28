@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load workflow %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_workflow.html' %}
+{% endblock %}
+{% block custom_head_css_js %}
+    {% load staticfiles %}
+    <link href="{% static 'smart-wizard/css/smart_wizard.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_circles.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_arrows.min.css' %}" rel="stylesheet">
+    <link href="{% static 'smart-wizard/css/smart_wizard_theme_dots.min.css' %}" rel="stylesheet">
+    <link href="{% static 'bootstrap-multiselect/css/bootstrap-multiselect.css' %}" rel="stylesheet">
+    <script src="{% static 'smart-wizard/js/jquery.smartWizard.min.js' %}"></script>
+{% endblock %}
+{% block content %}
+    <div class="container">
+		<h3>{{ wf_type }}：{{ wf_name }}</h3>
+		<div id="smartwizard">
+            <ul>
+                <li><a href="#step-1">一、<br/>
+                    <small>填写申请单</small>
+                </a></li>
+                <li><a href="#step-2">二、<br/>
+                    <small>自助流程，无需管理员审批</small>
+                </a></li>
+                <li><a href="#step-3">三、<br/>
+                    <small>结束</small>
+                </a></li>
+            </ul>
+            <div>
+                <div id="step-1" class="col-lg-12">
+                </div>
+                <div id="step-2" class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            流程详细
+                        </div>
+                        <div class="panel-body">
+                            <pre id="content1">{{ content }}</pre>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            操作员回执
+                        </div>
+                        <div class="panel-body">
+                            <p id="auditMsg">后台执行中……请勿关闭此页面！</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="step-3" class="col-lg-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            流程详细
+                        </div>
+                        <div class="panel-body">
+                            <pre id="content2">{{ content }}</pre>
+                        </div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            结果
+                        </div>
+                        <div class="panel-body">
+                            {% for fsl in fsl_list %}
+                                {% ifequal fsl.flow_step.step 3 %}
+                                    <pre>{{ fsl.reply }}</pre>
+                                {% endifequal %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+	</div>
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    <script>
+        //初始化数据
+        $(document).ready(function () {
+            var status = "{{ status }}";
+            var current_step = {{ current_step }};
+            var disable_steps = [0, 1, 2, 3, 4, 5];
+            disable_steps.splice(1, current_step - 1);
+            $('#smartwizard').smartWizard({
+                selected: current_step - 1,
+                lang: {
+                    next: '下一步',
+                    previous: '上一步'
+                },
+                toolbarSettings: {
+                    toolbarPosition: 'bottom',      // none, top, bottom, both
+                    toolbarButtonPosition: 'right', // left, right
+                    showNextButton: true,           // show/hide a Next button
+                    showPreviousButton: true,       // show/hide a Previous button
+                    toolbarExtraButtons: []
+                },
+                disabledSteps: disable_steps,
+                theme: 'arrows',
+                transitionEffect: 'fade'
+            });
+        });
+        setTimeout(function(){        //使用 setTimeout() 方法设定定时60000毫秒
+            window.location.href = "{% url 'workflow:flow-tomcat-jstack-detail' %}" + {{ flow_id }};
+        }, 15000);
+
+    </script>
+{% endblock %}

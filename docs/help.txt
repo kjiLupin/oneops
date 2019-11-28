@@ -1,0 +1,24 @@
+
+# 高危命令
+insert into ssh_perilous_cmd(cmd_regex,cmd_type,comment,creation_date) values
+('ls(?!\\w)', 'white', '', NOW()),
+('ll(?!\\w)', 'white', '', NOW()),
+('cd(?!\\w)', 'white', '', NOW()),
+('date', 'white', '查看系统时间', NOW()),
+('pwd', 'white', '', NOW()),
+('mkdir(?!\\w)', 'white', '', NOW()),
+('touch(?!\\w)', 'white', '', NOW()),
+('echo(?!\\w)', 'white', '', NOW()),
+
+('\\S*shutdown(?!\\w)', 'black', '', NOW()),
+('\\S*reboot(?!\\w)', 'black', '', NOW()),
+('\\S*poweroff(?!\\w)', 'black', '', NOW()),
+('\\S*halt(?!\\w)', 'black', '', NOW())
+;
+
+# 接口白名单
+insert into common_rpc_ip_white(url_name,ip_list,comment,applicant) values
+('api-app-list', '*', '', ''),
+('api-app-detail', '*', '', ''),
+('api-app-port-detail', '*', '', ''),
+('api-app-git-detail', '*', '', '');

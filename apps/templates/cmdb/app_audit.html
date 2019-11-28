@@ -1,0 +1,802 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_cmdb.html' %}
+{% endblock %}
+{% block content %}
+    <!-- 列表的表格-->
+    <div class="table-responsive">
+        <table id="name-list" data-toggle="table" class="table table-striped table-hover"
+               style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        </table>
+    </div>
+
+    <!--添加模态框-->
+    <div class="modal fade" id="addModal">
+        <div class="modal-dialog" style="width:60%;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">创建新应用</h4>
+                </div>
+                <div class="modal-body">
+                    <p hidden id="uperrorMsg" class="text-danger" style="color:red"></p> <!-- for error msg-->
+                    <form id="addForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input type="hidden" id="addid" name="app_id" class="form-control">
+                        <div class="form-group">
+                            <label for="zone" class="col-sm-2 control-label">编码<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="addapp_code" name="app_code" type="text" readonly
+                                       class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="type" class="col-sm-2 control-label">类型<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <select id="addapp_type" name="app_type" disabled
+                                        class="dropdown-menu-left selectpicker ">
+                                    <option value="other">选择项目类型</option>
+                                    <option value="jar">JAR</option>
+                                    <option value="war">WAR</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="data" class="col-sm-2 control-label">Tomcat端口<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="addtomcat_port" name="tomcat_port" readonly
+                                       class="form-control"
+                                       datatype="n" errormsg="端口值错误">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="ttl" class="col-sm-2 control-label">描述</label>
+                            <div class="col-sm-8">
+                                <input id="addcomment" name="comment" readonly class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="" class="col-sm-2 control-label">Prod环境<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="prod_host_all" name="prod_host_all" multiple
+                                            class="form-control m-b" size="6">
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-sm-1">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('prod_host_all', 'prod_host')"><i
+                                            class="fa fa-chevron-right"></i></button>
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('prod_host', 'prod_host_all')"><i
+                                            class="fa fa-chevron-left"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="prod_host" name="prod_host" class="form-control m-b"
+                                            size="6" multiple>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="" class="col-sm-2 control-label">Beta环境<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="beta_host_all" name="beta_host_all" multiple
+                                            class="form-control m-b" size="3">
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-sm-1">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('beta_host_all', 'beta_host')"><i
+                                            class="fa fa-chevron-right"></i></button>
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('beta_host', 'beta_host_all')"><i
+                                            class="fa fa-chevron-left"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="beta_host" name="beta_host" class="form-control m-b"
+                                            size="3" multiple>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="" class="col-sm-2 control-label">Pre环境<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="pre_host_all" name="pre_host_all" multiple
+                                            class="form-control m-b" size="3">
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-sm-1">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('pre_host_all', 'pre_host')"><i
+                                            class="fa fa-chevron-right"></i></button>
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('pre_host', 'pre_host_all')"><i
+                                            class="fa fa-chevron-left"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="pre_host" name="pre_host" class="form-control m-b"
+                                            size="3" multiple>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="" class="col-sm-2 control-label">Test环境<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="test_host_all" name="test_host_all" multiple
+                                            class="form-control m-b" size="5">
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-sm-1">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('test_host_all', 'test_host')"><i
+                                            class="fa fa-chevron-right"></i></button>
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('test_host', 'test_host_all')"><i
+                                            class="fa fa-chevron-left"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="test_host" name="test_host" class="form-control m-b"
+                                            size="5" multiple>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="addBtn">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!--更新模态窗-->
+    <div class="modal fade" id="updateModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">更新应用</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="updateForm" class="form-horizontal  nice-validator n-yellow"
+                          novalidate="novalidate">
+                        <input type="hidden" id="upid" name="id" class="form-control">
+                        <div class="form-group">
+                            <label for="zone" class="col-sm-2 control-label">编码<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upapp_code" name="app_code" type="text"
+                                       class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="host" class="col-sm-2 control-label">名称<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upapp_name" name="app_name" type="text"
+                                       class="form-control"
+                                       datatype="s1-16" errormsg="填写错误">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="type" class="col-sm-2 control-label">类型<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <select id="upapp_type" name="app_type"
+                                        class="dropdown-menu-left selectpicker ">
+                                    <option value="other">选择项目类型</option>
+                                    <option value="jar">JAR</option>
+                                    <option value="war">WAR</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="host" class="col-sm-2 control-label">Git/SVN地址<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upscm_url" name="scm_url" placeholder="git@git.example.com:xxx/yyy.git"
+                                       type="text"
+                                       class="form-control"
+                                       datatype="s1-16" errormsg="填写错误">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="host" class="col-sm-2 control-label">生产域名</label>
+                            <div class="col-sm-8">
+                                <input id="updomain_name" name="domain_name" placeholder="www.example.com" type="text"
+                                       class="form-control"
+                                       datatype="s1-16" errormsg="填写错误">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="pri" class="col-sm-2 control-label">重要性<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <select id="upimportance" name="importance"
+                                        class="dropdown-menu-left selectpicker ">
+                                    <option value="a">A（核心）</option>
+                                    <option value="b">B（正式）</option>
+                                    <option value="c">C（内部）</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="data" class="col-sm-2 control-label">Tomcat端口<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="uptomcat_port" name="tomcat_port" readonly
+                                       class="form-control"
+                                       datatype="n" errormsg="端口值错误">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="data" class="col-sm-2 control-label">开发部门<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upbiz_mgt_dept" name="biz_mgt_dept" type="text" readonly value=""
+                                       placeholder="若不填则放入未知部门" class="form-control">
+                                <a id="UpMenuBtn" onclick="showMenu3(); return false;">选择</a>
+                                <div id="upMenuContent" class="menuContent" style="display:none">
+                                    <ul id="upTree" class="ztree"></ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="ttl" class="col-sm-2 control-label">描述</label>
+                            <div class="col-sm-8">
+                                <input id="upcomment" name="comment" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="ttl" class="col-sm-2 control-label">第一负责人</label>
+                            <div class="col-sm-8">
+                                <select id="upprimary" name="primary" style="width: 100%"
+                                        tabindex="4">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="ttl" class="col-sm-2 control-label">第二负责人</label>
+                            <div class="col-sm-8">
+                                <select id="upsecondary" name="secondary" style="width: 100%"
+                                        multiple tabindex="4">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" onclick="updateFunc()">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal updateModal -->
+
+{% endblock content %}
+{% block custom_foot_css_js %}
+    {% load staticfiles %}
+    <link rel="stylesheet" href="/static/zTree_v3/css/awesomeStyle/awesome.css" type="text/css">
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.core.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.excheck.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exedit.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/jquery.ztree.exhide.js"></script>
+    <script type="text/javascript" src="/static/zTree_v3/js/fuzzysearch.js"></script>
+    <link rel="stylesheet" href="/static/toastr/toastr.min.css" type="text/css">
+    <script type="text/javascript" src="/static/toastr/toastr.min.js"></script>
+    <link href="{% static 'select2-4.0.5/css/select2.min.css' %}" rel="stylesheet">
+    <script src="{% static 'select2-4.0.5/js/select2.full.js' %}"></script>
+    
+    <script>
+        var zNodes = [];
+        function get_app_list() {
+            // 采取异步请求
+            $('#name-list').bootstrapTable('destroy').bootstrapTable({
+                method: 'get',
+                contentType: "application/x-www-form-urlencoded",
+                url: "{% url 'cmdb:app-audit-list' %}",
+                striped: true,                      //是否显示行间隔色
+                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                pagination: true,                   //是否显示分页（*）
+                sortable: false,                     //是否启用排序
+                sortOrder: "asc",                   //排序方式
+                sidePagination: "client",           //分页方式：client客户端分页，server服务端分页（*）
+                pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
+                pageSize: 14,                       //每页的记录行数（*）
+                pageList: [20, 30, 50, 100],        //可供选择的每页的行数（*）
+                showExport: false,                   //是否显示导出按钮
+                exportOptions: {
+                    fileName: 'pre_deploy_app_list'  //文件名称设置
+                },
+                search: false,                       //是否显示表格搜索
+                strictSearch: false,                //是否全匹配搜索
+                showColumns: false,                  //是否显示所有的列（选择显示的列）
+                showRefresh: false,                  //是否显示刷新按钮
+                minimumCountColumns: 2,             //最少允许的列数
+                clickToSelect: true,                //是否启用点击选中行
+                uniqueId: "id",                     //每一行的唯一标识，一般为主键列
+                showToggle: false,                   //是否显示详细视图和列表视图的切换按钮
+                cardView: false,                    //是否显示详细视图
+                detailView: false,                  //是否显示父子表
+                locale: 'zh-CN',                    //本地化
+                toolbar: "#toolbar",               //指明自定义的toolbar
+                queryParamsType: 'limit',
+                columns: [{
+                    title: '编码',
+                    field: 'app_code'
+                }, {
+                    title: '名称',
+                    field: 'app_name'
+                }, {
+                    title: 'Tomcat端口',
+                    field: 'tomcat_port'
+                }, {
+                    title: '类型',
+                    field: 'app_type'
+                }, {
+                    title: '仓库地址',
+                    field: 'scm_url'
+                }, {
+                    title: '生产域名',
+                    field: 'domain_name'
+                }, {
+                    title: '重要性',
+                    field: 'importance'
+                }, {
+                    title: '第一负责人',
+                    field: 'primary',
+                    formatter: function (value, row, index) {
+                        return substring(value, 7)
+                    }
+                }, {
+                    title: '第二负责人',
+                    field: 'secondary',
+                    formatter: function (value, row, index) {
+                        return substring(value, 7)
+                    }
+                }, {
+                    title: '备注',
+                    field: 'comment'
+                }, {
+                    title: '操作',
+                    field: 'id',
+                    formatter: function (value, row, index) {
+                        var html = "<button class='btn btn-warning' onclick=\"editFunc(" + value + ")\">修改</button>";
+                        html += "<button class='btn btn-danger' onclick=\"delFunc(" + value + ")\">取消</button>";
+{#                        {% if perms.auth.perm_cmdb_business_edit %}#}
+{#                            html += "<button class='btn btn-danger' onclick=\"auditFunc(" + value + ")\">审核</button>";#}
+{#                        {% endif %}#}
+                        return html
+                    }
+                }],
+                onLoadSuccess: function () {
+                },
+                onLoadError: function () {
+                    alert("数据加载失败！请检查接口返回信息和错误日志！");
+                },
+                queryParams: function (e) {
+                    return {
+                        search: e.search
+                    }
+                },
+                onSearch: function (e) {
+                    //传搜索参数给服务器
+                    return {
+                        search: e.search
+                    }
+                },
+                responseHandler: function (res) {
+                    //在ajax获取到数据，渲染表格之前，修改数据源
+                    return res;
+                }
+            });
+
+        }
+
+        function initTreeNodes() {
+            $.get("{% url 'cmdb:biz-dept-list' %}", function (data) {
+                $.each(data, function (index, v) {
+                    if (v["parent_id"] === 0 || v["parent_id"] === 1) {
+                        var open = true;
+                    } else {
+                        var open = false;
+                    }
+                    zNodes.push({"id": v["id"], "name": v["name"], "pId": v["parent_id"], "open": open});
+                });
+            });
+        }
+        //初始化数据
+        $(document).ready(function () {
+            get_app_list();
+            initTreeNodes();
+        });
+
+        function select_option() {
+            $('#prod_host option').each(function () {
+                $(this).prop('selected', true)
+            });
+            $('#beta_host option').each(function () {
+                $(this).prop('selected', true)
+            });
+            $('#pre_host option').each(function () {
+                $(this).prop('selected', true)
+            });
+            $('#test_host option').each(function () {
+                $(this).prop('selected', true)
+            });
+        }
+        // 以下创建操作
+        function prepareHostFunc(id) {
+            // 给app 预分配主机
+            $.ajax({
+                url: "{% url 'cmdb:api-app-presort-server' version="v1" %}" + id,
+                type: "get",
+                success: function (data) {
+                    if (data.code == 0) {
+                        $('#prod_host').empty();
+                        $('#prod_host_all').empty();
+                        $.each(data['result']['prod_host'], function (index, v) {
+                            var _html = "<option value='" + v['id'] + "' >" + v['hn'] + "</option>";
+                            $('#prod_host_all').append(_html);
+                        });
+                        $('#beta_host').empty();
+                        $('#beta_host_all').empty();
+                        $.each(data['result']['beta_host'], function (index, v) {
+                            var _html = "<option value='" + v['id'] + "' >" + v['hn'] + "</option>";
+                            $('#beta_host_all').append(_html);
+                        });
+                        $('#pre_host').empty();
+                        $('#pre_host_all').empty();
+                        $.each(data['result']['pre_host'], function (index, v) {
+                            var _html = "<option value='" + v['id'] + "' >" + v['hn'] + "</option>";
+                            $('#pre_host_all').append(_html);
+                        });
+                        $('#test_host').empty();
+                        $('#test_host_all').empty();
+                        $.each(data['result']['test_host'], function (index, v) {
+                            var _html = "<option value='" + v['id'] + "' >" + v['hn'] + "</option>";
+                            $('#test_host_all').append(_html);
+                        });
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        }
+        function auditFunc(id) {
+            $.ajax({
+                url: "{% url 'cmdb:app-detail' %}" + id,
+                type: "get",
+                success: function (data) {
+                    if (data.code == 0) {
+                        $('#addForm')[0].reset();
+                        $('#addid').val(id);
+                        var data = data['result'];
+                        $('#addapp_code').val(data['app_code']);
+                        $("#addapp_type").selectpicker('val',(data['app_type']));
+                        $('#addapp_type').selectpicker('refresh');
+                        $('#addtomcat_port').val(data['tomcat_port']);
+                        $('#addcomment').val(data['comment']);
+                        prepareHostFunc(id);
+                        $('#addModal').modal('show');
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        }
+        //表单验证
+        $("#addForm").Validform({
+            btnSubmit:"#addBtn",
+            tiptype: 3
+        });
+        /*添加*/
+        $('#addForm').on('submit', function () {
+            var data = $('#addForm').serialize();
+            select_option();
+            $.ajax({
+                url: "{% url 'cmdb:app-audit-list' %}",
+                type: "post",
+                data: data,
+                success: function (res) {
+                    if (res.code == 0) {
+                        swal({
+                        title:"success",
+                        text:"添加成功",
+                        type:"success",
+                        confirmButtonText:'确定'
+                        },function(){
+                            $('#addModal').modal('hide');
+                            get_app_list();
+                         });
+                    } else {
+                        swal("操作失败", res.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    $('#addModal').modal('hide');
+                    swal("操作失败", res, "error");
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+            return false;
+        }); /*submit end*/
+
+        // 以下修改操作
+        function showMenu3() {
+			var cityObj = $("#upbiz_mgt_dept");
+			var cityOffset = $("#upbiz_mgt_dept").offset();
+			$("#upMenuContent").css({left:cityOffset.left + "px", top:cityOffset.top + cityObj.outerHeight() + "px"}).slideDown("fast");
+			$("body").bind("mousedown", onBodyDown3);
+		}
+		function hideMenu3() {
+			$("#upMenuContent").fadeOut("fast");
+			$("body").unbind("mousedown", onBodyDown3);
+		}
+		function onBodyDown3(event) {
+			if (!(event.target.id == "UpMenuBtn" || event.target.id == "upMenuContent" || $(event.target).parents("#upMenuContent").length>0)) {
+				hideMenu3();
+			}
+		}
+        function onClick3(e, treeId, treeNode) {
+			var zTree = $.fn.zTree.getZTreeObj("upTree"),
+			nodes = zTree.getSelectedNodes(),
+			v = "";
+			sessionStorage.setItem('nodeId', nodes.id);
+			nodes.sort(function compare(a,b){return a.id-b.id;});
+			for (var i=0, l=nodes.length; i<l; i++) {
+				v += nodes[i].name + ",";
+			}
+			if (v.length > 0 ) v = v.substring(0, v.length-1);
+			var cityObj = $("#upbiz_mgt_dept");
+			cityObj.attr("value", v);
+			hideMenu3();
+		}
+
+        // 以下更新操作
+        /*点击按钮，显示更新模态窗,并获取该条数据信息*/
+        function editFunc(id) {
+            $.ajax({
+                url: "{% url 'cmdb:app-detail' %}" + id,
+                type: "get",
+                success: function (data) {
+                    if (data.code == 0) {
+                        var setting = {
+                            view: {
+                                dblClickExpand: false
+                            },
+                            data: {
+                                simpleData: {
+                                    enable: true
+                                }
+                            },
+                            callback: {
+                                onClick: onClick3
+                            }
+                        };
+                        var data = data['result'];
+                        $('#updateForm')[0].reset();
+                        reShowForm(data, 'updateForm');
+                        $("#upapp_type").selectpicker('val',(data['app_type']));
+                        $('#upapp_type').selectpicker('refresh');
+                        $("#upimportance").selectpicker('val',(data['importance']));
+                        $('#upimportance').selectpicker('refresh');
+                        $('#updateModal').modal('show');
+                        $.fn.zTree.init($("#upTree"), setting, zNodes);
+                        getOaUser({
+                            "url": "{% url 'accounts:api-oa-user-list' version='v1' %}",
+                            "select_id1": 'upprimary',
+                            "email1": data["primary"],
+                            "select_id2": 'upsecondary',
+                            "email2": data["secondary"]
+                        });
+                        $("#upprimary").select2({
+                            multiple: false,
+                            allowClear: true
+                        });
+                        $("#upsecondary").select2({
+                            multiple: true,
+                            allowClear: true
+                        });
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        }
+        /*更新信息*/
+        function updateFunc() {
+            swal({
+                    title: "是否确认更新？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var id = $("#upid").val();
+                        var formData = $('#updateForm').serializeArray();
+                        var obj = {};
+                        for (var i in formData) {
+                            if (obj.hasOwnProperty(formData[i].name)) {
+                                obj[formData[i].name] = obj[formData[i].name] + "," + formData[i]['value']
+                            } else {
+                                obj[formData[i].name] = formData[i]['value'];
+                            }
+                        }
+                        $.ajax({
+                            url: "{% url "cmdb:app-detail" %}" + id,
+                            type: "put",
+                            data: obj,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#updateModal').modal('hide');
+                                        get_app_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+        }
+
+        // 以下删除操作
+        function delFunc(id) {
+            swal({
+                    title: "是否确认删除？",
+                    text: "该记录将无法恢复！",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false
+                },
+                function () {
+                    $.ajax({
+                        url: "{% url 'cmdb:app-detail' %}" + id,
+                        type: "delete",
+                        data: {},
+                        success: function (res) {
+                            console.log(res);
+                            if (res.code == 0) {
+                                swal({
+                                    title: "success",
+                                    text: "操作成功",
+                                    type: "success",
+                                    confirmButtonText: '确定'
+                                }, function () {
+                                    get_app_list();
+                                });
+                            } else {
+                                swal("操作失败", res.errmsg, "error");
+                            }
+                        },
+                        beforeSend: function (xhr, settings) {
+                            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                            }
+                        }
+                    });
+                });
+        }
+
+        function move(from, to, from_o, to_o) {
+            $("#" + from + " option").each(function () {
+                if ($(this).prop("selected") == true) {
+                    $("#" + to).append(this);
+                    if( typeof from_o !== 'undefined'){
+                        $("#"+to_o).append($("#"+from_o +" option[value='"+this.value+"']"));
+                    }
+                }
+            });
+        }
+    </script>
+{% endblock %}

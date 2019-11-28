@@ -1,0 +1,77 @@
+<!-- Collect the nav links, forms, and other content for toggling -->
+<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+    <ul class="nav navbar-nav">
+        <li><a href="{% url 'accounts:profile' %}">Home </a></li>
+        <li><a href="{% url 'workflow:dashboard' %}">Workflow </a></li>
+        {% if perms.auth.perm_cmdb_asset_view %}
+            <li><a href="{% url 'cmdb:vm-list' %}">CMDB </a></li>
+        {% else %}
+            <li><a href="{% url 'cmdb:app-server-list' %}">CMDB </a></li>
+        {% endif %}
+        {% if perms.auth.perm_dns_zone_view %}
+            <li><a href="{% url 'dns:zone' %}">DnsPod </a></li>
+        {% endif %}
+        {% if perms.auth.perm_ssh_terminal %}
+            <li><a href="{% url 'ssh:charts' %}">WebSSH </a></li>
+        {% endif %}
+        {% if perms.auth.perm_job_task_execute %}
+            <li><a href="{% url 'job:cmd-execute' %}">Job </a></li>
+        {% endif %}
+        <li><a href="{% url 'tools:dashboard' %}">Tools </a></li>
+        <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+               aria-expanded="false">Monitoring <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+                {% if perms.auth.perm_href_pinpoint %}
+                    <li><a target="_blank" href="http://wppt-beta.yadoom.com/">服务监控-PinPoint</a></li>
+                {% endif %}
+                {% if perms.auth.perm_href_pinpoint %}
+                    <li><a target="_blank" href="http://zabbix.yadoom.com/zabbix/">基础监控-Zabbix</a></li>
+                {% endif %}
+            </ul>
+        </li>
+        <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true"
+               aria-expanded="false">Dropdown <span class="caret"></span></a>
+            <ul class="dropdown-menu">
+                <li><a href="#">Action</a></li>
+                <li><a href="#">Another action</a></li>
+                <li><a href="#">Something else here</a></li>
+                <li role="separator" class="divider"></li>
+                <li><a href="#">Separated link</a></li>
+                <li role="separator" class="divider"></li>
+                <li><a href="#">One more separated link</a></li>
+            </ul>
+        </li>
+    </ul>
+    <ul class="nav navbar-nav navbar-right">
+        <li>
+            <a>你好，{{ user.display }}</a>
+        </li>
+        {% if todo > 0 %}
+            <li>
+                <a href="#">
+                    <span class="fa fa-bell ">{{ todo }}</span>
+                </a>
+            </li>
+        {% else %}
+            <li>
+                <a href="#">
+                    <span class="fa fa-bell "></span>
+                </a>
+            </li>
+        {% endif %}
+        <!-- /.dropdown -->
+        <li class="dropdown">
+            <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+                <i class="fa fa-user fa-fw"></i> <i class="fa fa-caret-down"></i>
+            </a>
+            <ul class="dropdown-menu dropdown-user">
+                <li><a href="{% url 'accounts:profile' %}"><i class="fa fa-user fa-fw"></i> 个人中心</a>
+                </li>
+                <li><a href="{% url 'accounts:logout' %}"><i class="fa fa-sign-out fa-fw"></i> 退出</a></li>
+            </ul>
+            <!-- /.dropdown-user -->
+        </li>
+    </ul>
+</div><!-- /.navbar-collapse -->

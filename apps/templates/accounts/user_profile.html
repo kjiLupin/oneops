@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_default.html' %}
+{% endblock %}
+{% block content %}
+    <div class="wrapper wrapper-content animated fadeInRight">
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="tab-content">
+                    <div class="col-sm-8" style="padding-left: 0;">
+                        <div class="ibox float-e-margins">
+                            <div class="ibox-content">
+                                <div class="text-left">
+                                    <table class="table">
+
+                                        <tr class="no-borders-tr">
+                                            <td class="text-navy">账户</td>
+                                            <td>{{ user.username }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-navy">姓名</td>
+                                            <td>{{ user.display }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-navy">部门</td>
+                                            <td>{{ user.get_role_display }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-navy">邮箱</td>
+                                            <td>{{ user.email }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-navy">账户状态</td>
+                                            <td>{{ user.is_active|yesno:"Actived,Disabled,Unkown" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-navy">添加时间</td>
+                                            <td>{{ user.date_joined|date:"Y-m-d H:i:s" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-navy">上次登录</td>
+                                            <td>{{ user.last_login|date:"Y-m-d H:i:s" }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-navy">权限项组</td>
+                                            <td>
+                                                <table>
+                                                    {% for group in user.groups.all %}
+                                                        <tr>
+                                                            <td>
+                                                                {{ group.name }}
+                                                            </td>
+                                                        </tr>
+                                                    {% endfor %}
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

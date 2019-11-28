@@ -1,0 +1,11 @@
+- hosts: "{{apphost}}"
+  tasks:
+  - name: copy file to tmp
+    copy: src=/data/ansible/scripts/admin/tomcat_restart.sh dest=/tmp/tomcat_restart.sh mode=0775
+    ignore_errors: yes
+  - name: ops java
+    shell: /bin/bash /tmp/tomcat_restart.sh {{app_code}} {{tomcat_port}} {{do}}
+    register: result
+    ignore_errors: True
+  - debug: msg="{{result.stdout}}"
+  serial: "60%"

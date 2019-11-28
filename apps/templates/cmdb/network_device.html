@@ -1,0 +1,848 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_cmdb.html' %}
+{% endblock %}
+{% block content %}
+    <!-- 自定义操作按钮-->
+    <div id="toolbar" class="form-inline">
+        <div class="form-group bootstrap-select ">
+            <select id="idc" class="dropdown-menu-right selectpicker" data-live-search="true">
+                <option value="" selected="selected">选择机房</option>
+                {% for idc in idc_list %}
+                    <option value="{{ idc.id }}">{{ idc.idc_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group bootstrap-select ">
+            <select id="status" class="dropdown-menu-right selectpicker" data-live-search="true">
+                <option value="" selected="selected">选择状态</option>
+                <option value="used">已上架</option>
+                <option value="unused">未上架</option>
+            </select>
+        </div>
+        <div class="form-group ">
+            {% if perms.auth.perm_cmdb_asset_edit %}
+                <button id="btn_add" type="button" class="btn btn-default">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 添加网络设备
+                </button>
+                <button id="btn_import" type="button" class="btn btn-default">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 批量导入
+                </button>
+            {% endif %}
+        </div>
+    </div>
+    <!-- 列表的表格-->
+    <div class="table-responsive">
+        <table id="name-list" data-toggle="table" class="table table-striped table-hover"
+               style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        </table>
+    </div>
+
+    <!--添加模态框-->
+    <div class="modal fade" id="addModal">
+        <div class="modal-dialog" style="width:80%;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">添加网络设备</h4>
+                </div>
+                <div class="modal-body">
+                    <p hidden id="uperrorMsg" class="text-danger" style="color:red"></p> <!-- for error msg-->
+                    <form id="addForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <div class="form-group">
+                            <label for="sys_name" class="col-sm-2 control-label">SYS Name<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="addsys_name" name="sys_name" placeholder="建议留空，让采集脚本自动录入！"
+                                       type="text" class="form-control" datatype="*" errormsg="格式不正确">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="login_type" class="col-sm-2 control-label">登陆方式<span class="red-fonts">*</span></label>
+                            <div class="col-sm-3">
+                                <div class="bootstrap-select ">
+                                    <select id="addlogin_type" name="login_type" class="dropdown-menu-right selectpicker" data-live-search="true">
+                                        <option value="telnet">Telnet</option>
+                                        <option value="ssh">SSH</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <label for="login_address" class="col-sm-1 control-label">登陆IP<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="addlogin_address" name="login_address" datatype="ip" errormsg="格式不正确" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="snmp" class="col-sm-2 control-label">SNMP<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="addsnmp" name="snmp" placeholder="SNMP 地址，格式：1.1.1.1:161"
+                                       type="text" class="form-control" datatype="*" errormsg="格式不正确">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="type" class="col-sm-2 control-label">类型<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2" name="type">
+                                {{ ndf.type }}
+                            </div>
+                            <label for="manufacturer" class="col-sm-1 control-label">品牌<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2" name="manufacturer">
+                                {{ ndf.manufacturer }}
+                            </div>
+                            <label for="os" class="col-sm-2 control-label">操作系统<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2" name="os">
+                                {{ ndf.os }}
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="product_name" class="col-sm-2 control-label">型号<span class="red-fonts">*</span></label>
+                            <div class="col-sm-6">
+                                <input id="addproduct_name" name="product_name" placeholder="" class="form-control">
+                            </div>
+                            <label for="model" class="col-sm-1 control-label">U数<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <input id="addmodel" name="model" placeholder="" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-2 control-label">IDC<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <select id="addidc" name='idc' class="dropdown-menu-left selectpicker" data-live-search="true">
+                                    <option value="0" selected="selected">全部</option>
+                                    {% for idc in idc_list %}
+                                        <option value="{{ idc.id }}">{{ idc.idc_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <label for="cabinet" class="col-sm-1 control-label">机柜</label>
+                            <div class="col-sm-2">
+                                <select id="addcabinet" name='cabinet' class="dropdown-menu-left selectpicker" data-live-search="true" datatype="*">
+                                </select>
+                            </div>
+                            <label for="cabinet_pos" class="col-sm-2 control-label">机柜槽位</label>
+                            <div class="col-sm-2">
+                                <input id="addcabinet_pos" name="cabinet_pos" class="form-control">
+                            </div>
+                        </div><!--IDC/机柜/机柜槽位-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="supplier" class="col-sm-2 control-label">供应商<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="addsupplier" name="supplier" placeholder="张三" class="form-control">
+                            </div>
+                            <label for="supplier_phone" class="col-sm-2 control-label">联系方式<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <input id="addsupplier_phone" name="supplier_phone" placeholder="13800001111" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="status" class="col-sm-2 control-label">状态<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2" name="status">
+                                {{ ndf.status }}
+                            </div>
+                            <label for="comment" class="col-sm-2 control-label">备注<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="addcomment" name="comment" placeholder="" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="addBtn">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!--更新模态窗-->
+    <div class="modal fade" id="updateModal">
+        <div class="modal-dialog" style="width:80%;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">更新网络设备</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="upForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input type="hidden" id="upid" name="id" class="form-control">
+                        <div class="form-group">
+                            <label for="sys_name" class="col-sm-2 control-label">SYS Name<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upsys_name" name="sys_name" placeholder="建议留空，让采集脚本自动录入！"
+                                       type="text" class="form-control" datatype="*" errormsg="格式不正确">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="login_type" class="col-sm-2 control-label">登陆方式<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <div class="bootstrap-select ">
+                                    <select id="uplogin_type" name="login_type" class="dropdown-menu-left selectpicker" data-live-search="true">
+                                        <option value="telnet">Telnet</option>
+                                        <option value="ssh">SSH</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <label for="login_address" class="col-sm-2 control-label">登陆IP<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <input id="uplogin_address" name="login_address" datatype="ip" errormsg="格式不正确" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="snmp" class="col-sm-2 control-label">SNMP<span class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upsnmp" name="snmp" placeholder="SNMP 地址，格式：1.1.1.1:161"
+                                       type="text" class="form-control" datatype="*" errormsg="格式不正确">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="type" class="col-sm-2 control-label">类型<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2" name="type">
+                                {{ ndf.type }}
+                            </div>
+                            <label for="manufacturer" class="col-sm-1 control-label">品牌<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2" name="manufacturer">
+                                {{ ndf.manufacturer }}
+                            </div>
+                            <label for="os" class="col-sm-2 control-label">操作系统<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2" name="os">
+                                {{ ndf.os }}
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="product_name" class="col-sm-2 control-label">型号<span class="red-fonts">*</span></label>
+                            <div class="col-sm-6">
+                                <input id="upproduct_name" name="product_name" placeholder="" class="form-control">
+                            </div>
+                            <label for="model" class="col-sm-1 control-label">U数<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <input id="upmodel" name="model" placeholder="" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-2 control-label">IDC<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <select id="upidc" name='idc' class="dropdown-menu-left selectpicker" data-live-search="true">
+                                    <option value="0" selected="selected">全部</option>
+                                    {% for idc in idc_list %}
+                                        <option value="{{ idc.id }}">{{ idc.idc_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <label for="cabinet" class="col-sm-1 control-label">机柜</label>
+                            <div class="col-sm-2">
+                                <select id="upcabinet" name='cabinet' class="dropdown-menu-left selectpicker" data-live-search="true" datatype="*">
+                                </select>
+                            </div>
+                            <label for="cabinet_pos" class="col-sm-2 control-label">机柜槽位</label>
+                            <div class="col-sm-2">
+                                <input id="upcabinet_pos" name="cabinet_pos" class="form-control">
+                            </div>
+                        </div><!--IDC/机柜/机柜槽位-->
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="supplier" class="col-sm-2 control-label">供应商<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="upsupplier" name="supplier" placeholder="张三" class="form-control">
+                            </div>
+                            <label for="supplier_phone" class="col-sm-2 control-label">联系方式<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2">
+                                <input id="upsupplier_phone" name="supplier_phone" placeholder="13800001111" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="status" class="col-sm-2 control-label">状态<span class="red-fonts">*</span></label>
+                            <div class="col-sm-2" name="status">
+                                {{ ndf.status }}
+                            </div>
+                            <label for="comment" class="col-sm-2 control-label">备注<span class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <input id="upcomment" name="comment" placeholder="" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" onclick="updateFunc()">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <div class="modal fade" id="importModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">导入网络设备</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="importForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate"
+                    action="{% url 'cmdb:network-device-import' %}" enctype="multipart/form-data" method="post">
+
+                        <div class="form-group">
+                            <label for="network_device" class="col-sm-2 control-label">模板：</label>
+                            <div class="col-sm-8">
+                                <a href="{% url 'cmdb:network-device-export' %}" style="display: block">下载</a>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="network_device" class="col-sm-2 control-label">文件：</label>
+                            <div class="col-sm-8">
+                                <input id="network_device" name="files" type="file" >
+                            </div>
+                            <span class="help-block red-fonts"></span>
+                        </div>
+                    </form>
+                    <p>
+                        <p class="text-success" id="id_created"></p>
+                        <p id="id_created_detail"></p>
+                        <p class="text-warning" id="id_updated"></p>
+                        <p id="id_updated_detail"></p>
+                        <p class="text-danger" id="id_failed"></p>
+                        <p id="id_failed_detail"></p>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button data-dismiss="modal" class="btn btn-white" type="button">取消</button>
+                    <button class="btn btn-primary" type="button" id="btn_import_submit">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="maintModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">添加维保记录</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="maintForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input type="hidden" id="maintid" name="id" class="form-control">
+                        <input type="hidden" name="maint" value="add" class="form-control">
+                        <div class="form-group">
+                            <label for="hostname" class="col-sm-2 control-label">主机名</label>
+                            <div class="col-sm-4">
+                                <input id="maintname" name="sys_name" class="form-control" readonly="readonly">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="maintcontent" class="col-sm-2 control-label">维保记录</label>
+                            <div class="col-sm-8">
+                                <input id="maintcontent" name="content" class="form-control">
+                            </div>
+                        </div>
+                </div>
+                <div class="modal-footer">
+                    <button data-dismiss="modal" class="btn btn-white" type="button">取消</button>
+                    <button class="btn btn-primary" type="button" id="btn_maint">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock content %}
+{% block custom_foot_css_js %}
+    {% load staticfiles %}
+    <script>
+        //获取列表
+        function get_name_list() {
+            // 采取异步请求
+            // 初始化table
+            $('#name-list').bootstrapTable('destroy').bootstrapTable({
+                method: 'get',
+                contentType: "application/x-www-form-urlencoded",
+                url: "{% url 'cmdb:network-device-list' %}",
+                striped: true,                      //是否显示行间隔色
+                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                pagination: true,                   //是否显示分页（*）
+                sortable: true,                     //是否启用排序
+                sortOrder: "asc",                   //排序方式
+                sidePagination: "server",           //分页方式：client客户端分页，server服务端分页（*）
+                pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
+                pageSize: 14,                       //每页的记录行数（*）
+                pageList: [20, 30, 50, 100],        //可供选择的每页的行数（*）
+                autoWidth: false,
+                showExport: true,                   //是否显示导出按钮
+                exportOptions: {
+                    fileName: 'network_devices'           //文件名称设置
+                },
+                search: true,                       //是否显示表格搜索
+                strictSearch: false,                //是否全匹配搜索
+                showColumns: true,                  //是否显示所有的列（选择显示的列）
+                showRefresh: true,                  //是否显示刷新按钮
+                minimumCountColumns: 2,             //最少允许的列数
+                clickToSelect: true,                //是否启用点击选中行
+                uniqueId: "id",                     //每一行的唯一标识，一般为主键列
+                showToggle: true,                   //是否显示详细视图和列表视图的切换按钮
+                cardView: false,                    //是否显示详细视图
+                detailView: true,                  //是否显示父子表
+                detailFormatter: function (index, row) {
+                    var ip = "IP列表：</br>" + row.ip.replace(/ /g, '<br/>');
+                    var maint = "维保记录：</br>" + row.maint.replace(/\n/g, '<br/>');
+                    return ip + '<br/>' + maint
+                },
+                locale: 'zh-CN',                    //本地化
+                toolbar: "#toolbar",               //指明自定义的toolbar
+                queryParamsType: 'limit',
+                columns: [{
+                    title: '资产编号',
+                    field: 'aid',
+                    sortable: true
+                }, {
+                    title: 'SysName',
+                    field: 'sn',
+                    sortable: true
+                }, {
+                    title: '类型',
+                    field: 'type',
+                    sortable: true
+                }, {
+                    title: '登录方式',
+                    field: 'lt',
+                    sortable: true
+                }, {
+                    title: '登陆地址',
+                    field: 'la',
+                    sortable: true
+                }, {
+                    title: 'SNMP',
+                    field: 'snmp',
+                    sortable: true
+                }, {
+                    title: '操作系统',
+                    field: 'os',
+                    sortable: true
+                }, {
+                    title: '型号',
+                    field: 'pn',
+                    sortable: true
+                }, {
+                    title: '固件',
+                    field: 'ver',
+                    sortable: true
+                }, {
+                    title: '机房',
+                    field: 'idc',
+                    sortable: true
+                }, {
+                    title: '机柜',
+                    field: 'cab',
+                    sortable: true
+                }, {
+                    title: '状态',
+                    field: 'stat',
+                    sortable: true
+                }, {
+                    title: '供应商',
+                    field: 'spl',
+                    sortable: true
+                }, {
+                    title: '联系方式',
+                    field: 'sp'
+                }, {
+                    title: '备注',
+                    field: 'cmt',
+                    formatter: function (value, row, index) {
+                        return substring(value, 7)
+                    }
+                }, {
+                    title: '上次检测',
+                    field: 'dlc',
+                    sortable: true
+                }, {
+                    title: '操作',
+                    field: 'id',
+                    formatter: function (value, row, index) {
+                        {% if perms.auth.perm_cmdb_asset_edit %}
+                            var html = "<button class='btn btn-warning' onclick=\"editFunc(" + row.id + ")\">编辑</button>"
+                            html += "<button class='btn btn-info' onclick=\"maintFunc(" + row.id + ")\">维保</button>"
+                            html += "<button class='btn btn-danger' onclick=\"delFunc(" + row.id + ")\">删除</button>"
+                            return html;
+                        {% endif %}
+                    }
+                }],
+                onLoadSuccess: function () {
+                },
+                onLoadError: function () {
+                    alert("数据加载失败！请检查接口返回信息和错误日志！");
+                },
+                queryParams: function (params) {
+                    return {
+                        limit: params.limit,
+                        offset: params.offset,
+                        sortName: params.sort,
+                        sortOrder: params.order,
+                        idc_id: $("#idc").val(),
+                        status: $("#status").val(),
+                        search: params.search
+                    }
+                },
+                onSearch: function (params) {
+                    //传搜索参数给服务器
+                    return {
+                        search: params.search
+                    }
+                },
+                responseHandler: function (res) {
+                    //在ajax获取到数据，渲染表格之前，修改数据源
+                    return res;
+                }
+            });
+
+        }
+
+        $("#idc").change(function () {
+            get_name_list();
+        });
+        $("#status").change(function () {
+            get_name_list();
+        });
+        //初始化数据
+        $(document).ready(function () {
+            get_name_list();
+        });
+
+        // 切换idc，机柜内容联动变化
+        $("#addidc").change(function () {
+            getCabinet({
+                "url": "{% url 'cmdb:cabinet-list' %}",
+                "select_id": 'addcabinet',
+                "idc_id": $(this).children('option:selected').val(),
+                "cabinet_id": null
+            });
+        });
+        $("#upidc").change(function () {
+            getCabinet({
+                "url": "{% url 'cmdb:cabinet-list' %}",
+                "select_id": 'upcabinet',
+                "idc_id": $(this).children('option:selected').val(),
+                "cabinet_id": null
+            });
+        });
+        // 以下添加操作
+        /*点击按钮，显示添加模态窗*/
+        $("#btn_add").on('click',function(){
+            $('#addModal').modal('show');
+        });
+        $("#btn_import").on('click',function(){
+            $('#importModal').modal('show');
+        });
+
+        //表单验证
+        $("#addForm").Validform({
+            btnSubmit: "#addBtn",
+            tiptype: 3,
+            datatype: {
+                "ip": function (gets, obj, curform, regxp) {
+                    //参数gets是获取到的表单元素值，obj为当前表单元素，curform为当前验证的表单，regxp为内置的一些正则表达式的引用;
+                    var reg1 = /^(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])\.(\d{1,2}|1\d\d|2[0-4]\d|25[0-5])$/;
+                    if (reg1.test(gets)) {
+                        return true;
+                    }
+                    return false;
+                }
+            }
+        });
+        /*添加*/
+        $('#addForm').on('submit', function () {
+            var data = $('#addForm').serialize();
+            $.ajax({
+                url: "{% url 'cmdb:network-device-list' %}",
+                type: "post",
+                data: data,
+                success: function (res) {
+                    if (res.code == 0) {
+                        $('#addModal').modal('hide');
+                        swal({
+                        title:"success",
+                        text:"添加成功",
+                        type:"success",
+                        confirmButtonText:'确定'
+                        },function(){
+                            get_name_list();
+                         });
+                    } else {
+                        swal("操作失败", res.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    $('#addModal').modal('hide');
+                    swal("操作失败", res, "error");
+                },
+                beforeSend: function (xhr, settings) {
+                    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                        xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                    }
+                }
+            });
+            return false;
+        }); /*submit end*/
+
+        // 以下更新操作
+        /*点击按钮，显示更新模态窗,并获取该条数据信息*/
+        function editFunc(id) {
+            $.ajax({
+                url: "{% url 'cmdb:network-device-detail' %}" + id,
+                type: "get",
+                data: {},
+                success: function (data) {
+                    if (data.code == 0) {
+                        var data = data['result'];
+                        $('#updateModal').modal('show');
+                        $('#upForm')[0].reset();
+                        reShowForm(data, 'upForm');
+
+                        $("#upidc").selectpicker('val',(data['idc']));
+                        $("#upidc").selectpicker('refresh');
+
+                        getCabinet({
+                            "url": "{% url 'cmdb:cabinet-list' %}",
+                            "select_id": 'upcabinet',
+                            "idc_id": data['idc'],
+                            "cabinet_id": data['cabinet']
+                        });
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+        }
+        /*更新信息*/
+        function updateFunc() {
+            swal({
+                    title: "是否确认更新？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var id = $("#upid").val();
+                        var data = $('#upForm').serialize();
+                        $.ajax({
+                            url: "{% url "cmdb:network-device-detail" %}" + id,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#addModal').modal('hide');
+                                        get_name_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+        }
+        function maintFunc(id) {
+            $.ajax({
+                url: "{% url 'cmdb:network-device-detail' %}" + id,
+                type: "get",
+                data: {},
+                success: function (data) {
+                    if (data.code == 0) {
+                        var data = data['result'];
+                        $('#maintForm')[0].reset();
+                        reShowForm(data, 'maintForm');
+                        $('#maintModal').modal('show');
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+            $('#btn_maint').unbind("click").click(function(){
+                swal({
+                    title: "是否确认添加该维保记录？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var data = $('#maintForm').serialize();
+                        $.ajax({
+                            url: "{% url 'cmdb:network-device-detail' %}" + id,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#maintModal').modal('hide');
+                                        get_name_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+            });
+        }
+        // 以下删除操作
+        function delFunc(id) {
+            swal({
+                    title: "是否确认删除？",
+                    text: "该服务器将被永久删除！",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false
+                },
+                function () {
+                    $.ajax({
+                        url: "{% url "cmdb:network-device-detail" %}" + id,
+                        type: "delete",
+                        data: {},
+                        success: function (res) {
+                            console.log(res);
+                            if (res.code == 0) {
+                                swal({
+                                    title: "success",
+                                    text: "操作成功",
+                                    type: "success",
+                                    confirmButtonText: '确定'
+                                }, function () {
+                                    get_name_list();
+                                });
+                            } else {
+                                swal("操作失败", res.errmsg, "error");
+                            }
+                        },
+                        beforeSend: function (xhr, settings) {
+                            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                            }
+                        }
+                    });
+                });
+        }
+        $("#btn_import_submit").on('click',function(){
+            var $form = $('#importForm');
+            swal({
+                    title: "导入确认",
+                    text: "是否确认导入网络设备？",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消"
+                },
+                function () {
+                    $form.find('.help-block').remove();
+                    function success(data) {
+                        // console.log(data);
+                        $('<span />', {class: 'help-block text-danger'}).html(data.msg).insertAfter($('#network_device'));
+                        if (data.code === 0) {
+                            var obj = document.getElementById('network_device');
+                            obj.outerHTML = obj.outerHTML;
+                            $('#id_created').html(data.created_info);
+                            $('#id_created_detail').html(data.created.join('</br>'));
+                            $('#id_updated').html(data.updated_info);
+                            $('#id_updated_detail').html(data.updated.join('</br>'));
+                            $('#id_failed').html(data.failed_info);
+                            $('#id_failed_detail').html(data.failed.join('</br>'));
+                        } else {
+                            $('#id_created').html('');
+                            $('#id_created_detail').html('');
+                            $('#id_updated').html('');
+                            $('#id_updated_detail').html('');
+                            $('#id_failed').html('');
+                            $('#id_failed_detail').html('');
+                        }
+                    }
+
+                    $form.ajaxSubmit({success: success});
+                });
+        });
+
+    </script>
+{% endblock %}

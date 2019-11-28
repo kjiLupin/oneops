@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+{% block custom_nav_bar_left %}
+    {% include 'nav_bar_left_ssh.html' %}
+{% endblock %}
+{% block content %}
+    <!-- 自定义操作按钮-->
+    <div id="toolbar" class="form-inline">
+        <div class="form-group ">
+            {% if perms.auth.perm_ssh_host_user_edit %}
+                <a href="/admin/ssh/hostuser/" type="button" class="btn btn-default">
+                    <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> 添加HostUser
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    <!-- 列表的表格-->
+    <div class="table-responsive">
+        <table id="name-list" data-toggle="table" class="table table-striped table-hover"
+               style="table-layout:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+        </table>
+    </div>
+
+    <div class="modal fade" id="updateModal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">主机和系统用户登陆绑定</h4>
+                </div>
+                <div class="modal-body">
+                    <p hidden id="uperrorMsg" class="text-danger" style="color:red"></p> <!-- for error msg-->
+                    <form id="upForm" class="form-horizontal  nice-validator n-yellow" novalidate="novalidate">
+                        <input type="hidden" id="upid" name="id" class="form-control">
+                        <div class="form-group">
+                            <label for="zone" class="col-sm-2 control-label">系统用户<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="upusername" name="username" type="text" readonly
+                                       class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="type" class="col-sm-2 control-label">登陆方式<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-8">
+                                <input id="uplogin_type" name="login_type" type="text" readonly
+                                       class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="hr-line-dashed"></div>
+                        <div class="form-group">
+                            <label for="ttl" class="col-sm-2 control-label">描述</label>
+                            <div class="col-sm-8">
+                                <input id="updescription" name="description" readonly class="form-control">
+                            </div>
+                        </div>
+
+                        <select id="unbound_begin" name="unbound_begin" multiple style="display: none"
+                                class="form-control m-b" size="20">
+                        </select>
+                        <select id="bound_begin" name="bound_begin" multiple style="display: none"
+                                size="20" class="form-control m-b">
+                        </select>
+
+                        <div class="form-group">
+                            <label for="group_name" class="col-sm-2 control-label">过滤</label>
+                            <div class="col-sm-4">
+                                <input id="noselect" class="form-control"
+                                       oninput="searchFunc(this.value, 'unbound', 'unbound_begin')">
+                            </div>
+                            <div class="col-sm-1">
+                            </div>
+                            <div id="select" class="col-sm-4">
+                                <input class="form-control"
+                                       oninput="searchFunc(this.value, 'bound', 'bound_begin')">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="" class="col-sm-2 control-label">主机<span
+                                    class="red-fonts">*</span></label>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="unbound" name="unbound" multiple
+                                            class="form-control m-b" size="20">
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-sm-1">
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('unbound', 'bound', 'unbound_begin', 'bound_begin')"><i
+                                            class="fa fa-chevron-right"></i></button>
+                                    <button type="button" class="btn btn-white"
+                                            onclick="move('bound', 'unbound', 'bound_begin', 'unbound_begin')"><i
+                                            class="fa fa-chevron-left"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div>
+                                    <select id="bound" name="bound" class="form-control m-b"
+                                            size="20" multiple>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                                <button type="button" class="btn btn-primary" id="upBtn">确认</button>
+                            </div>
+                        </div> <!--button-->
+                    </form> <!--form-->
+                </div> <!--modal-body-->
+
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+{% endblock content %}
+{% block custom_foot_css_js %}
+    
+    <script>
+        //获取列表
+        function get_name_list() {
+            // 采取异步请求
+            // 初始化table
+            $('#name-list').bootstrapTable('destroy').bootstrapTable({
+                method: 'get',
+                contentType: "application/x-www-form-urlencoded",
+                url: "{% url 'ssh:host-user-list' %}" + "{{ username }}",
+                striped: true,                      //是否显示行间隔色
+                cache: false,                       //是否使用缓存，默认为true，所以一般情况下需要设置一下这个属性（*）
+                pagination: true,                   //是否显示分页（*）
+                sortable: true,                     //是否启用排序
+                sortOrder: "asc",                   //排序方式
+                sidePagination: "client",           //分页方式：client客户端分页，server服务端分页（*）
+                pageNumber: 1,                      //初始化加载第一页，默认第一页,并记录
+                pageSize: 14,                       //每页的记录行数（*）
+                pageList: [20, 30, 50, 100],        //可供选择的每页的行数（*）
+                showExport: true,                   //是否显示导出按钮
+                exportOptions: {
+                    fileName: 'host_user_list'           //文件名称设置
+                },
+                search: true,                       //是否显示表格搜索
+                strictSearch: false,                //是否全匹配搜索
+                showColumns: true,                  //是否显示所有的列（选择显示的列）
+                showRefresh: true,                  //是否显示刷新按钮
+                minimumCountColumns: 2,             //最少允许的列数
+                clickToSelect: true,                //是否启用点击选中行
+                uniqueId: "id",                     //每一行的唯一标识，一般为主键列
+                showToggle: true,                   //是否显示详细视图和列表视图的切换按钮
+                cardView: false,                    //是否显示详细视图
+                detailView: false,                  //是否显示父子表
+                locale: 'zh-CN',                    //本地化
+                toolbar: "#toolbar",               //指明自定义的toolbar
+                queryParamsType: 'limit',
+                columns: [{
+                    title: '系统用户',
+                    field: 'username',
+                    sortable: true
+                }, {
+                    title: '登陆方式',
+                    field: 'login_type'
+                }, {
+                    title: '版本',
+                    field: 'version'
+                }, {
+                    title: '激活',
+                    field: 'active'
+                }, {
+                    title: '描述',
+                    field: 'description'
+                }, {
+                    title: '绑定主机数',
+                    field: 'bound_asset_num'
+                }, {
+                    title: '创建时间',
+                    field: 'creation_date'
+                }, {
+                    title: '操作',
+                    field: 'id',
+                    formatter: function (value, row, index) {
+                        {% if perms.auth.perm_cmdb_host_user_edit %}
+                            var html = "<button class='btn btn-info' onclick=\"editFunc(" + value + ")\">绑定主机</button>"
+                            html += "<a href='/admin/ssh/hostuser/"+value+"/change/' type='button' class='btn btn-warning'>编辑</a>"
+                            html += "<button class='btn btn-danger' onclick=\"delFunc(" + value + ")\">删除</button>"
+                            return html;
+                        {% endif %}
+                    }
+                }],
+                onLoadSuccess: function () {
+                },
+                onLoadError: function () {
+                    alert("数据加载失败！请检查接口返回信息和错误日志！");
+                },
+                queryParams: function (e) {
+                    return {
+                        search: e.search
+                    }
+                },
+                onSearch: function (e) {
+                    //传搜索参数给服务器
+                    return {
+                        search: e.search
+                    }
+                },
+                responseHandler: function (res) {
+                    //在ajax获取到数据，渲染表格之前，修改数据源
+                    return res;
+                }
+            });
+
+        }
+
+        //初始化数据
+        $(document).ready(function () {
+            get_name_list();
+        });
+
+        function searchFunc(text, noselect, total) {
+            $("#" + noselect).children().each(
+                    function () {
+                        $(this).remove();
+                    });
+
+            $("#" + total).children().each(function () {
+                if ($(this).text().search(text) != -1) {
+                    $("#" + noselect).append($(this).clone())
+                }
+            })
+        }
+        function move(from, to, from_o, to_o) {
+            $("#" + from + " option").each(function () {
+                if ($(this).prop("selected") == true) {
+                    $("#" + to).append(this);
+                    if( typeof from_o !== 'undefined'){
+                        $("#"+to_o).append($("#"+from_o +" option[value='"+this.value+"']"));
+                    }
+                }
+            });
+        }
+        function select_option() {
+            $('#bound option').each(function () {
+                $(this).prop('selected', true)
+            });
+        }
+        function editFunc(id) {
+            $.ajax({
+                url: "{% url 'ssh:host-user-asset-detail' %}" + id,
+                type: "get",
+                data: {},
+                success: function (data) {
+                    if (data.code == 0) {
+                        var realData = data['result'];
+                        $('#updateModal').modal('show');
+                        $('#upForm')[0].reset();
+                        reShowForm(realData,'upForm');
+                        $('#bound_begin').empty();
+                        $.each(data['result']['bound'], function (index, v) {
+                            var _html = "<option value='" + v['id'] + "' >" + v['hn'] + "</option>";
+                            $('#bound_begin').append(_html);
+                        });
+                        $('#bound').empty();
+                        $.each(data['result']['bound'], function (index, v) {
+                            var _html = "<option value='" + v['id'] + "' >" + v['hn'] + "</option>";
+                            $('#bound').append(_html);
+                        });
+                        $('#unbound_begin').empty();
+                        $.each(data['result']['unbound'], function (index, v) {
+                            var _html = "<option value='" + v['id'] + "' >" + v['hn'] + "</option>";
+                            $('#unbound_begin').append(_html);
+                        });
+                        $('#unbound').empty();
+                        $.each(data['result']['unbound'], function (index, v) {
+                            var _html = "<option value='" + v['id'] + "' >" + v['hn'] + "</option>";
+                            $('#unbound').append(_html);
+                        });
+                    } else {
+                        swal("操作失败", data.errmsg, "error");
+                    }
+                },
+                error: function (res) {
+                    console.log(res);
+                    swal("操作失败", res, "error");
+                }
+            });
+            $("#upBtn").unbind("click").click(function () {
+                swal({
+                    title: "是否确认更新？",
+                    text: "",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false,
+                    closeOnCancel: false
+                },
+                function (isConfirm) {
+                    if (isConfirm) {
+                        var id = $("#upid").val();
+                        select_option();
+                        var data = $('#upForm').serialize();
+                        $.ajax({
+                            url: "{% url "ssh:host-user-asset-detail" %}" + id,
+                            type: "put",
+                            data: data,
+                            success: function (data) {
+                                if (data.code == 0) {
+                                    swal({
+                                        title: "success",
+                                        text: "更新成功",
+                                        type: "success",
+                                        confirmButtonText: '确定'
+                                    }, function () {
+                                        $('#updateModal').modal('hide');
+                                        get_name_list();
+                                    });
+                                } else {
+                                    swal("操作失败", data.errmsg, "error");
+                                }
+                            },
+                            beforeSend: function (xhr, settings) {
+                                if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                    xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                                }
+                            }
+                        });
+                    } else {
+                        swal("取消成功！", "", "error");
+                    }
+                });
+            });
+        }
+
+        // 以下删除操作
+        function delFunc(id) {
+            swal({
+                    title: "是否确认删除？",
+                    text: "该记录将无法恢复！",
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#DD6B55",
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    closeOnConfirm: false
+                },
+                function () {
+                    $.ajax({
+                        url: "{% url "ssh:host-user-detail" %}" + id,
+                        type: "delete",
+                        data: {},
+                        success: function (res) {
+                            console.log(res);
+                            if (res.code == 0) {
+                                swal({
+                                    title: "success",
+                                    text: "操作成功",
+                                    type: "success",
+                                    confirmButtonText: '确定'
+                                }, function () {
+                                    get_name_list();
+                                });
+                            } else {
+                                swal("操作失败", res.errmsg, "error");
+                            }
+                        },
+                        beforeSend: function (xhr, settings) {
+                            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                                xhr.setRequestHeader("X-CSRFToken", getCookie('csrftoken'))
+                            }
+                        }
+                    });
+                });
+        }
+    </script>
+{% endblock %}

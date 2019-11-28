@@ -1,0 +1,39 @@
+<nav class="navbar-default sidebar" style="margin-top:0px;" role="navigation">
+    <div class="sidebar-nav navbar-collapse">
+        <ul class="nav" id="side-menu">
+            {% if perms.auth.perm_accounts_charts %}
+                <li>
+                    <a href="{% url 'ssh:charts' %}"><i class="fa fa-bar-chart-o fa-fw"></i> Charts</a>
+                </li>
+            {% endif %}
+            {% if perms.auth.perm_ssh_perilous_cmd_view %}
+                <li>
+                    <a href="#"><i class="fa fa-tasks fa-fw"></i> 系统用户<span class="fa arrow"></span></a>
+                    <ul class="nav nav-second-level">
+                        <li>
+                            <a href="{% url 'ssh:host-user-overview' %}">系统用户</a>
+                        </li>
+                    </ul>
+                </li>
+            {% endif %}
+            {% if perms.auth.perm_ssh_perilous_cmd_view %}
+                <li>
+                    <a href="#"><i class="fa fa-tasks fa-fw"></i> 高危命令<span class="fa arrow"></span></a>
+                    <ul class="nav nav-second-level">
+                        <li>
+                            <a href="{% url 'ssh:perilous-cmd' %}">高危命令</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'ssh:perilous-cmd-group' %}">命令组</a>
+                        </li>
+                        <li>
+                            <a href="{% url 'ssh:perilous-cmd-grant' %}">用户组授权</a>
+                        </li>
+                    </ul>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+    <!-- /.sidebar-collapse -->
+</nav>
+<!-- /.navbar-static-side -->
